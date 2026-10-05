@@ -1,4 +1,4 @@
-"""CLI：cutout（抠图）/ layout（排版）。watermark 在 W3 接入。
+"""CLI：cutout（抠图）/ layout（排版）。
 
 退出码：全部成功 0 / 有文件失败 1 / 未捕获异常 2。
 """
@@ -15,7 +15,7 @@ from ..core import layout as layout_core
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="koutu", description="徽章图片处理（抠图 / 去水印 / 排版）"
+        prog="koutu", description="徽章图片处理（抠图 / 排版）"
     )
     parser.add_argument("--version", action="version", version=f"koutu {__version__}")
     sub = parser.add_subparsers(dest="command", metavar="<命令>")

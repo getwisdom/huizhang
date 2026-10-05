@@ -1,7 +1,7 @@
 # AGENTS.md
 
 本仓库使用 [OpenSpec](https://github.com/Fission-AI/OpenSpec) 做规格驱动开发（CLI 已安装，schema = `spec-driven`）。
-仓库正在按提案 **`python-pyqt-rewrite`** 重写为 **Python + PyQt6 单程序**（三个页签：抠图 / 排版 / 去水印）；实施按 `openspec/changes/python-pyqt-rewrite/tasks.md` 的 W0–W6 波次推进。
+仓库正在按提案 **`python-pyqt-rewrite`** 重写为 **Python + PyQt6 单程序**（两个页签：抠图 / 排版；水印交外部人工处理，不在程序内）；实施按 `openspec/changes/python-pyqt-rewrite/tasks.md` 的 W0–W6 波次推进。
 
 | 位置 | 含义 |
 | --- | --- |
@@ -36,7 +36,7 @@
 产物顺序为 **proposal → specs → design → tasks**。
 
 1. **先读规格**：动任何代码前，先读 `openspec/config.yaml` 的 `context`、项目根的 `PROJECT.md` 和 `openspec/specs/` 下相关的能力规格；对照物与容差看 `docs/验收清单.md`。
-2. **改动前先建提案**：`openspec new change "<change-id>"`。提案要写清：为什么改、改什么、影响哪条路线（抠图 / 去水印 / 排版 / 流程契约）、是否需要挂 golden 对照或补 pytest 用例，以及非目标（不做什么）。跨模块或调整算法参数时才补 `design.md`。
+2. **改动前先建提案**：`openspec new change "<change-id>"`。提案要写清：为什么改、改什么、影响哪条路线（抠图 / 排版 / 流程契约）、是否需要挂 golden 对照或补 pytest 用例，以及非目标（不做什么）。跨模块或调整算法参数时才补 `design.md`。
 3. **写规格差异**：放在 `openspec/changes/<change-id>/specs/<capability>/spec.md`，用 `## ADDED / MODIFIED / REMOVED Requirements` 分段，每条按 `### Requirement:` + `#### Scenario:` 写，**每个 Requirement 至少一个 Scenario**（`--strict` 会强制检查）。
 4. **实现**：按 `tasks.md` 逐条完成，完成后把对应项标成 `[x]`。
 5. **归档**：`openspec archive <change-id>`，它会校验并把差异合并进 `openspec/specs/`。
@@ -46,14 +46,14 @@
 ## 本仓库的硬约束
 
 - **单实现 + 金标准回归**：正式实现只有 `koutu/`（Python）一份；旧实现（C# / PowerShell / 旧 Python）整体归档 `legacy/`，只读参考、不再演进、不参与验收。行为改动以 `golden/` 对照 + `docs/验收清单.md` 容差为准（**禁止对旧产物做逐字节 SHA 对照**，一律走像素级指标 + 日志统计行）。
-- **不要改目录契约**：`原图 / 原图_去水印 / doubao / 底图 / 无水印 / 无水印_AI重绘 / 无水印_精修 / 无水印_细纹轻 / 无水印_细纹重 / 无水印底图 / 去水印_预览 / 已排版 / 水印诊断` 这些中文目录名是给操作者的接口，**不可重命名、不可删除**；新程序的自动流程只读写 `原图 → 底图 → 无水印 → 已排版`。
+- **不要改目录契约**：`原图 / 原图_去水印 / doubao / 底图 / 无水印 / 无水印_AI重绘 / 无水印_精修 / 无水印_细纹轻 / 无水印_细纹重 / 无水印底图 / 去水印_预览 / 已排版 / 水印诊断` 这些中文目录名是给操作者的接口，**不可重命名、不可删除**；新程序的自动流程只读写 `原图 → 底图 → 已排版`。
 - **一切以程序根为根**：打包版 = `koutu.exe` 所在目录（`os.path.dirname(os.path.abspath(sys.executable))`）；源码版 = 仓库根。不依赖当前工作目录，不写死绝对路径。
 - **Windows-only**：依赖 Python 3.12 + PyQt6 / numpy / Pillow；交付为 PyInstaller `--onedir --windowed` 单目录绿色包（不装 Python 也能双击跑）。不做跨平台适配。
 - **依赖与构建**：解释器用仓库 `.venv`（`D:\workspace\koutu\.venv\Scripts\python.exe`；裸 `python` 是商店占位符，别用）；依赖精确锁定在 `requirements.txt`；装包用华为云镜像（`-i https://mirrors.huaweicloud.com/repository/pypi/simple`）。
 - **不引入联网服务**：运行期不得依赖网络或外部服务（AI 去水印为非目标）。
 - **文件编码**：`.py / .md / .txt` 一律 UTF-8；`.ps1` 一律 UTF-8 **带 BOM**（PowerShell 5.1 会按 GBK 误读导致语法错）；如保留 `.bat` 用系统 ANSI（GBK）并在开头 `chcp 65001`。
 - **面向操作者一律中文**：界面文案、日志、文档、错误提示都用中文。
-- **日志是验收证据**：`运行日志.txt`（抠图）/ `去水印日志.txt`（去水印）/ `排版日志.txt`（排版，含槽位分配表）里的统计行是人工核对正确性的唯一手段，改处理逻辑必须保留统计行语义。
+- **日志是验收证据**：`运行日志.txt`（抠图）/ `排版日志.txt`（排版，含槽位分配表）里的统计行是人工核对正确性的唯一手段，改处理逻辑必须保留统计行语义。
 
 ## 验证方式
 

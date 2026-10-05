@@ -34,8 +34,8 @@
 **Migration**: `legacy/ocr.ps1`（路径随归档变化）；重写期如需 OCR 复核使用归档副本。
 
 ### Requirement: 水印综合扫描
-**Reason**: 同上；去水印重新设计后，扫描需求由研究波次工具承载。
-**Migration**: `legacy/scan_watermark.ps1`。
+**Reason**: 探针归档；且去水印功能整体取消（2026-10-06 使用者决定交豆包人工处理），扫描需求不再存在。
+**Migration**: `legacy/scan_watermark.ps1`；相关研究工具留档 `spike/watermark_research/`（未采用）。
 
 ### Requirement: 抠图结果与原图的差值分析
 **Reason**: 同上；像素级对照改由 `golden/scripts/pixel-diff.ps1` 承担。
