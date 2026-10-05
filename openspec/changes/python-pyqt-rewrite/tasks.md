@@ -5,11 +5,11 @@
 
 ## 0. 立项与装置（批准后立即执行；不写产品代码）
 
-- [ ] 0.1 修订 `.gitignore`：删除 `golden/`、`docs/`、`tests/` 三行；新增忽略 `dist/`、`build/`、`去水印日志.txt`、`koutu.ini`；验证：`git status` 只出现预期变更，数据目录与 `.venv` 不在其中
-- [ ] 0.2 验收装置入库：`git add docs tests golden` 后提交（golden 含约 12.1MB 基线图；`*.exe` 维持忽略）；验证：`git ls-files` 含 `docs/验收清单.md`、`docs/汇报/`、`tests/test_smoke.py`、`golden/README.md`、`golden/baseline_products/已排版/第1页.png`
-- [ ] 0.3 归档旧实现到 `legacy/`：`git mv` 旧源码与脚本（清单见 design D6）、旧 `.bat` 入口、本地移动旧 `*.exe`；新增 `legacy/README.md`（历史状态 + 不参与验收 + 可只读排查）；验证：根目录不再有旧入口；`legacy/` 内容完整；数据目录零改动（阶段 0.1 命令通过）
-- [ ] 0.4 更新 `docs/验收清单.md` 阶段 0.2：对照路径改为 `legacy\`，与 `golden/checksums/tools_binaries.csv` 按内容哈希逐文件对应（忽略路径前缀）；验证：命令输出「差异数: 0」并留档
-- [ ] 0.5 按 design D11 更新 `AGENTS.md`、`PROJECT.md`、`openspec/config.yaml`（双实现/编译/无测试等表述改为单实现 + golden + pytest + PyInstaller）；验证：`openspec validate --strict --all` 全绿，且通读修订段无旧世界残留
+- [x] 0.1 修订 `.gitignore`：删除 `golden/`、`docs/`、`tests/` 三行；新增忽略 `dist/`、`build/`、`去水印日志.txt`、`koutu.ini`；验证：`git status` 只出现预期变更，数据目录与 `.venv` 不在其中
+- [x] 0.2 验收装置入库：`git add docs tests golden` 后提交（golden 含约 12.1MB 基线图；`*.exe` 维持忽略）；验证：`git ls-files` 含 `docs/验收清单.md`、`docs/汇报/`、`tests/test_smoke.py`、`golden/README.md`、`golden/baseline_products/已排版/第1页.png`
+- [x] 0.3 归档旧实现到 `legacy/`：`git mv` 旧源码与脚本（清单见 design D6）、旧 `.bat` 入口、本地移动旧 `*.exe`；新增 `legacy/README.md`（历史状态 + 不参与验收 + 可只读排查）；验证：根目录不再有旧入口；`legacy/` 内容完整；数据目录零改动（阶段 0.1 命令通过）
+- [x] 0.4 更新 `docs/验收清单.md` 阶段 0.2：对照路径改为 `legacy\`，与 `golden/checksums/tools_binaries.csv` 按内容哈希逐文件对应（忽略路径前缀）；验证：命令输出「差异数: 0」并留档
+- [x] 0.5 按 design D11 更新 `AGENTS.md`、`PROJECT.md`、`openspec/config.yaml`（双实现/编译/无测试等表述改为单实现 + golden + pytest + PyInstaller）；验证：`openspec validate --strict --all` 全绿，且通读修订段无旧世界残留
 
 ## 1. 抠图内核（W1；对照 golden 阶段 1）
 
