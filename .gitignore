@@ -1,0 +1,47 @@
+# 只跟踪源码、文档与规格；运行数据、日志、编译产物一律不入库。
+# 这些目录都是脚本按「目录即接口」契约自动创建的（CreateDirectory / New-Item / os.makedirs），
+# 因此克隆后即使不存在也不影响运行。
+
+# ── 工作数据目录：操作者自己的徽章素材，不进公开仓库 ──
+原图/
+原图_去水印/
+doubao/
+底图/
+无水印/
+无水印_AI重绘/
+无水印_精修/
+无水印_细纹轻/
+无水印_细纹重/
+无水印底图/
+去水印_预览/
+已排版/
+水印诊断/
+
+# ── 日志与探针输出：属于本地验收证据，因机器而异 ──
+运行日志.txt
+排版日志.txt
+_layout_log.txt
+_probe_*.txt
+_probe_*.csv
+
+# ── 编译产物与分发包：用系统自带 csc.exe 现场重建，见 PROJECT.md ──
+*.exe
+*.zip
+*.7z
+
+# ── 验收 / 金标准产物：尚未定稿，暂不入库 ──
+# golden/ 是「Python + PyQt6 重写版」对照旧工具的金标准基线，
+# docs/验收清单.md 与 tests/ 属于同一批验收装置。
+# 需要入库时删掉这三行即可（注意 golden/baseline_products/ 含约 11.9MB 徽章成品图）。
+golden/
+docs/
+tests/
+
+# ── Python ──
+__pycache__/
+*.pyc
+
+# ── 系统杂物 ──
+Thumbs.db
+desktop.ini
+*.tmp
