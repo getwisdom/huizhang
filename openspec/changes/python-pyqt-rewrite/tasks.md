@@ -13,14 +13,14 @@
 
 ## 1. 抠图内核（W1；对照 golden 阶段 1）
 
-- [ ] 1.1 建立 `koutu/` 包骨架与 `paths.py`（程序根、目录契约常量、日志/设置路径）、`config.py`；验证：`python -m koutu --version` 可运行；单测覆盖 frozen / 源码两种根解析（monkeypatch `sys.frozen`）
-- [ ] 1.2 `core/imaging.py`：numpy/PIL 加载（24/32 位）、PNG 保存（失败重试 + 落日志）、高质量缩放；验证：单测在临时目录往返读写 32 位 PNG（alpha 保持）
-- [ ] 1.3 `core/cutout.py` 扫描 + RANSAC + 精修（40 线、阈值 45、种子 2024、600 次、内点 4px、精修容差 5px）；验证：参数常量与规格逐项一致的单测 + 基线 7 张圆心/半径 ±2px（对照 `golden/logs/run_final/运行日志.txt`）
-- [ ] 1.4 `core/cutout.py` 羽化、裁切、输出（32 位 ARGB、线性羽化、边界夹取、RGB 原样）；验证：单测「圆内无空洞」（不透明像素与 π·r² 偏差 ≤0.5%）与输出尺寸（417×417 场景）
-- [ ] 1.5 `core/pipeline.py` 批次执行器（确定性遍历、失败隔离、汇总、进度/日志回调、协作式取消）；验证：单测「6 好 + 1 坏」批继续处理且汇总正确
-- [ ] 1.6 `cli/main.py` 的 `cutout` 子命令 + `运行日志.txt`（UTF-8、统计行语义等价）+ 退出码 0/1/2；验证：在独立运行目录实跑基线 7 张，日志逐张对照基线（±2px）、断言退出码
-- [ ] 1.7 pytest 对照测试挂接 golden（文件名集合 / 宽高 / 圆心半径 / 不透明 ±0.5% / alpha 差>8 ≤0.5% 等像素阈值）；验证：`.venv\Scripts\python.exe -m pytest tests -q` 全绿且不写生产目录
-- [ ] 1.8 实跑核对与记录：按 `docs/验收清单.md` 阶段 1 命令执行（含 `pixel-diff.ps1`），实测数字追加到 `docs/汇报/`；验证：阶段 1 判据逐项打勾
+- [x] 1.1 建立 `koutu/` 包骨架与 `paths.py`（程序根、目录契约常量、日志/设置路径）、`config.py`；验证：`python -m koutu --version` 可运行；单测覆盖 frozen / 源码两种根解析（monkeypatch `sys.frozen`）
+- [x] 1.2 `core/imaging.py`：numpy/PIL 加载（24/32 位）、PNG 保存（失败重试 + 落日志）、高质量缩放；验证：单测在临时目录往返读写 32 位 PNG（alpha 保持）
+- [x] 1.3 `core/cutout.py` 扫描 + RANSAC + 精修（40 线、阈值 45、种子 2024、600 次、内点 4px、精修容差 5px）；验证：参数常量与规格逐项一致的单测 + 基线 7 张圆心/半径 ±2px（对照 `golden/logs/run_final/运行日志.txt`）
+- [x] 1.4 `core/cutout.py` 羽化、裁切、输出（32 位 ARGB、线性羽化、边界夹取、RGB 原样）；验证：单测「圆内无空洞」（不透明像素与 π·r² 偏差 ≤0.5%）与输出尺寸（417×417 场景）
+- [x] 1.5 `core/pipeline.py` 批次执行器（确定性遍历、失败隔离、汇总、进度/日志回调、协作式取消）；验证：单测「6 好 + 1 坏」批继续处理且汇总正确
+- [x] 1.6 `cli/main.py` 的 `cutout` 子命令 + `运行日志.txt`（UTF-8、统计行语义等价）+ 退出码 0/1/2；验证：在独立运行目录实跑基线 7 张，日志逐张对照基线（±2px）、断言退出码
+- [x] 1.7 pytest 对照测试挂接 golden（文件名集合 / 宽高 / 圆心半径 / 不透明 ±0.5% / alpha 差>8 ≤0.5% 等像素阈值）；验证：`.venv\Scripts\python.exe -m pytest tests -q` 全绿且不写生产目录
+- [x] 1.8 实跑核对与记录：按 `docs/验收清单.md` 阶段 1 命令执行（含 `pixel-diff.ps1`），实测数字追加到 `docs/汇报/`；验证：阶段 1 判据逐项打勾
 
 ## 2. 排版内核（W2；对照 golden 阶段 2）
 
