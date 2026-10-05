@@ -1,0 +1,25 @@
+# legacy/ —— 旧实现归档（只归档，不删除）
+
+- 归档时间：2026-10-06（提案 `python-pyqt-rewrite` 批准后，W0 波次执行）
+- 归档原因：仓库重写为 Python + PyQt6 单程序（见 `openspec/changes/python-pyqt-rewrite/`）；
+  旧实现整体退役，为保留历史与只读排查能力，全部移动到此目录。
+- 纪律：**不再演进、不参与验收**；行为对照一律以 `golden/`（冻结产物 + 日志统计行）为准。
+- 身份锚点：内容与 `golden/checksums/tools_binaries.csv` 的冻结哈希一致；
+  复核命令见 `docs/验收清单.md` 阶段 0.2（以本目录为基准根生成清单比对，Diff 必须为 0）。
+
+## 内容清单（20 个文件）
+
+| 文件 | 原用途 |
+| --- | --- |
+| `抠图工具.cs` / `徽章抠图.exe` | 抠图（C# 图形界面 + `--batch`） |
+| `cut_badge.ps1` / `抠图.bat` | 抠图脚本版与双击入口 |
+| `排版工具.cs` / `排版工具.exe` | 排版（C#，控制台） |
+| `layout.ps1` / `排版.bat` | 排版脚本版与双击入口 |
+| `detex.py` / `remove_watermark.py` / `remove_watermark_ai.py` | 旧去水印三路线（细纹压制 / 点阵扣除 / AI 重绘；均不作新基准） |
+| `去水印.bat` / `去水印AI.bat` / `豆包流程.bat` | 旧去水印与在线流程入口 |
+| `ocr.ps1` / `scan_watermark.ps1` / `_analyze.ps1` / `_probe_demo.ps1` | 旧探针脚本（只读排查可用） |
+| `徽章抠图工具_打包.zip` / `排版工具使用说明.7z` | 旧分发包（本地文件，未入库） |
+
+- `*.exe / *.zip / *.7z` 属本地文件（`.gitignore` 全局忽略；源码可重建或不再需要），不随克隆提供；
+  源码（`.cs / .ps1 / .py / .bat`）全部在版本控制内。
+- 新入口为单程序 `koutu.exe`（重写进行中，文档随 W5 波次更新；新版前仍可用本目录工具做历史对照）。
