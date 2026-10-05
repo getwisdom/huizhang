@@ -5,6 +5,7 @@
 - 现状：旧工具集 = C# 双实现（两个 exe）+ PowerShell 脚本版（`Add-Type` 内联同一套 C#）+ Python 去水印三路线 + 五个 `.bat` 入口；三套独立 GUI；无 git 时代的验收靠日志统计行与探针脚本。
 - 已就绪的前置：`golden/`（双实现逐字节一致、原仓库零改动、像素级对照脚本与容差草案）、`docs/环境验证.md`（Python 3.12.10 / PyQt6 6.11 / PyInstaller 6.22.3 实测，含中文+空格路径、§7 编码坑、§9 交接要点）、`docs/验收清单.md`（阶段 0–4 判据）、`requirements.txt`（精确锁定）、git（2 个提交、身份 `koutu <koutu@localhost>`）。
 - 本设计对应规格：本变更 7 份 delta（`badge-cutout / badge-layout / watermark-removal / pipeline-orchestration / diagnostics / desktop-gui / packaging-toolchain`）。动机与范围见 `proposal.md`。
+- 补交材料（会话中途落地）：`docs/基线知识.md` 与 `docs/金标准数据.csv` 已逐项对照：抠图/排版参数语义与本文档一致；排版槽位排序已按「包围盒顶边 y → 左边 x」在规格中收紧；`原图_去水印` 等历史目录归入保留名单。
 
 ## Goals / Non-Goals
 

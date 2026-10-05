@@ -72,7 +72,7 @@
 - **THEN** 退出码为 1，其余成功图正常输出
 
 ### Requirement: 金标准验收判据（抠图）
-抠图输出 SHALL 按 `docs/验收清单.md` 阶段 1 判据对照 `golden/baseline_products/底图/`：输出文件名集合一致；每张宽高一致；圆心 ±2px、半径 ±2px；不透明像素数（alpha>0）±0.5%；像素级对照（`golden/scripts/pixel-diff.ps1` 口径）alpha 差>8 占比 ≤0.5%、最大 alpha 差 ≤64、双方可见像素 RGB 差>8 占比 ≤0.5%。
+抠图输出 SHALL 按 `docs/验收清单.md` 阶段 1 判据对照 `golden/baseline_products/底图/`：输出文件名集合一致；每张宽高一致；圆心 ±2px、半径 ±2px；不透明像素数（alpha>0）±0.5%；像素级对照（`golden/scripts/pixel-diff.ps1` 口径）alpha 差>8 占比 ≤0.5%、最大 alpha 差 ≤64、双方可见像素 RGB 差>8 占比 ≤0.5%。逐项速查对照 `docs/金标准数据.csv`（尺寸 / 圆心 / 半径 / 底图 alpha 包围盒；不透明像素数基线逐步补齐）。
 
 #### Scenario: 基线逐张对照
 - **WHEN** 用基线 7 张图跑新实现并按像素级命令对照
