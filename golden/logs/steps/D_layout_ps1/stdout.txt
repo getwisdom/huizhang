@@ -1,0 +1,32 @@
+demo: 2480x3508
+detected 18 slots:
+  slot center=(474.5,448.5) r=414.0 d=828.0
+  slot center=(2017.5,448.5) r=414.0 d=828.0
+  slot center=(1247.5,864.5) r=414.0 d=828.0
+  slot center=(474.5,1316.5) r=414.0 d=828.0
+  slot center=(2013.5,1316.5) r=414.0 d=828.0
+  slot center=(1244.5,1753.5) r=414.0 d=828.0
+  slot center=(470.5,2189.5) r=414.0 d=828.0
+  slot center=(2021.5,2194.5) r=414.0 d=828.0
+  slot center=(1246.5,2628.5) r=414.0 d=828.0
+  slot center=(2018.5,3065.5) r=414.0 d=828.0
+  slot center=(474.5,3067.5) r=414.0 d=828.0
+fitted 11 circles
+base files: 7
+base 1.png: circle center=(207.5,207.5) r=204.0
+base 2.png: circle center=(207.5,207.0) r=203.0
+base 3.png: circle center=(208.5,208.0) r=204.0
+base 4.png: circle center=(208.5,207.5) r=204.0
+base 5.png: circle center=(208.5,207.5) r=204.0
+base 6.png: circle center=(207.5,207.0) r=203.5
+base 测试_1.png: circle center=(245.0,245.0) r=241.5
+pages: 1 (11 per page)
+  p1 slot# 1 (475,449) <- 1.png
+  p1 slot# 2 (2018,449) <- 2.png
+  p1 slot# 3 (1248,865) <- 3.png
+  p1 slot# 4 (475,1317) <- 4.png
+  p1 slot# 5 (2014,1317) <- 5.png
+  p1 slot# 6 (1245,1754) <- 6.png
+  p1 slot# 7 (471,2190) <- 测试_1.png
+  -> 已排版\第1页.png
+

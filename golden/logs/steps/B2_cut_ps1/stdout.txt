@@ -1,0 +1,14 @@
+
+==== 徽章抠图工具（圆形）====
+原图: D:\workspace\_koutu_golden\原图 (7 张)
+输出: D:\workspace\_koutu_golden\底图
+
+[完成] 1.jpg -> 1.png  (OK 417x417 circle=(cx=414, cy=365, r=200))
+[完成] 2.jpg -> 2.png  (OK 416x415 circle=(cx=412, cy=364, r=199))
+[完成] 3.jpg -> 3.png  (OK 417x417 circle=(cx=414, cy=365, r=200))
+[完成] 4.jpg -> 4.png  (OK 417x417 circle=(cx=414, cy=364, r=200))
+[完成] 5.jpg -> 5.png  (OK 417x417 circle=(cx=414, cy=364, r=200))
+[完成] 6.jpg -> 6.png  (OK 416x415 circle=(cx=414, cy=365, r=199))
+[完成] 测试_1.jpg -> 测试_1.png  (OK 492x492 circle=(cx=397, cy=421, r=238))
+
+==== 全部完成：成功 7 张，失败 0 张 ====
