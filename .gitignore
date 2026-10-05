@@ -28,6 +28,9 @@ _probe_*.csv
 !golden/**/运行日志.txt
 !golden/**/排版日志.txt
 !golden/**/_layout_log.txt
+# 数据目录同名的基线子目录（底图/、已排版/）在 golden 内反忽略
+!golden/baseline_products/底图/
+!golden/baseline_products/已排版/
 
 # ── 运行设置（QSettings ini，随程序目录） ──
 koutu.ini
