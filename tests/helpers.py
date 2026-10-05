@@ -54,7 +54,9 @@ def parse_cutout_log(text: str) -> dict:
     return out
 
 
-LAYOUT_ALLOC_RE = re.compile(r"p(\d+) slot#\s*(\d+) \((\d+),(\d+)\) <- (.+?)\s*$")
+LAYOUT_ALLOC_RE = re.compile(
+    r"p(\d+) slot#\s*(\d+) \((\d+),(\d+)\) <- (.+?)\s*$", re.MULTILINE
+)
 
 
 def parse_layout_alloc(text: str) -> list:
@@ -71,9 +73,10 @@ def parse_layout_alloc(text: str) -> list:
 
 
 def make_badge_image(directory, name="badge.png", size=800, cx=400, cy=400, r=200):
-    """合成一张「背景 + 圆形徽章 + 圆内浅色纹样」的透明 PNG，用于单元/CLI 测试。"""
+    """合成一张「背景 + 圆形徽章 + 圆内浅色纹样」的样张，用于单元/CLI 测试。"""
     img = np.zeros((size, size, 4), dtype=np.uint8)
     img[..., :3] = 30
+    img[..., 3] = 255
     yy, xx = np.mgrid[0:size, 0:size]
     d = np.sqrt((xx - cx) ** 2 + (yy - cy) ** 2)
     img[d <= r, :3] = 128

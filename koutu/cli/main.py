@@ -1,4 +1,4 @@
-"""CLI：cutout（抠图）。layout / watermark 在 W2 / W3 接入。
+"""CLI：cutout（抠图）/ layout（排版）。watermark 在 W3 接入。
 
 退出码：全部成功 0 / 有文件失败 1 / 未捕获异常 2。
 """
@@ -10,6 +10,7 @@ from pathlib import Path
 
 from .. import __version__, paths
 from ..core import cutout as cutout_core
+from ..core import layout as layout_core
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -25,6 +26,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_cut.add_argument("--scan-t", type=float, default=45.0, help="扫描阈值（默认 45）")
     p_cut.add_argument("--feather", type=int, default=4, help="羽化宽度 px（默认 4）")
     p_cut.add_argument("--margin", type=int, default=4, help="裁切边距 px（默认 4）")
+
+    p_lay = sub.add_parser("layout", help="排版：底图 + 排版demo.png → 已排版")
+    p_lay.add_argument("--demo", default=paths.DEMO_NAME, help="模板文件（默认 排版demo.png）")
+    p_lay.add_argument("--src", default=paths.DIR_BASE, help="输入目录（默认 底图）")
+    p_lay.add_argument("--dst", default=paths.DIR_LAYOUT, help="输出目录（默认 已排版）")
     return parser
 
 
@@ -45,6 +51,22 @@ def _cmd_cutout(args, log_dir=None) -> int:
     return 0 if summary.fail == 0 and not summary.cancelled else 1
 
 
+def _cmd_layout(args, log_dir=None) -> int:
+    root = paths.program_root()
+    demo = paths.resolve_dir(root, args.demo)
+    src = paths.resolve_dir(root, args.src)
+    dst = paths.resolve_dir(root, args.dst)
+    log_root = Path(log_dir) if log_dir else root
+    summary, _text = layout_core.run_layout_batch(
+        demo,
+        src,
+        dst,
+        log_path=log_root / paths.LOG_LAYOUT,
+        emit=lambda line: print(line),
+    )
+    return 1 if summary.error is not None else 0
+
+
 def main(argv=None, log_dir=None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -54,6 +76,8 @@ def main(argv=None, log_dir=None) -> int:
     try:
         if args.command == "cutout":
             return _cmd_cutout(args, log_dir=log_dir)
+        if args.command == "layout":
+            return _cmd_layout(args, log_dir=log_dir)
         print(f"错误：尚未实现的子命令 {args.command}")
         return 2
     except Exception as exc:  # 未捕获异常 → 退出码 2
