@@ -1,7 +1,7 @@
 # AGENTS.md
 
 本仓库使用 [OpenSpec](https://github.com/Fission-AI/OpenSpec) 做规格驱动开发（CLI 已安装，schema = `spec-driven`）。
-仓库正在按提案 **`python-pyqt-rewrite`** 重写为 **Python + PyQt6 单程序**（两个页签：抠图 / 排版；水印交外部人工处理，不在程序内）；实施按 `openspec/changes/python-pyqt-rewrite/tasks.md` 的 W0–W6 波次推进。
+仓库正在按提案 **`python-pyqt-rewrite`** 重写为 **Python + PyQt6 单程序**（页签：抠图 / 排版 / 去水印占位——本版不实现去水印算法，仅保留入口占位、算法后续版本提供）；实施按 `openspec/changes/python-pyqt-rewrite/tasks.md` 的 W0–W6 波次推进。
 
 | 位置 | 含义 |
 | --- | --- |

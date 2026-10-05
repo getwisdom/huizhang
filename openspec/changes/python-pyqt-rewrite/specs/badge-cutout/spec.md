@@ -101,7 +101,7 @@
 **Migration**: 见新需求「圆内完整保留、羽化与裁切」。
 
 ### Requirement: 图形界面
-**Reason**: 旧独立窗口退役；GUI 收敛为单程序两页签，归属新能力 `desktop-gui`。
+**Reason**: 旧独立窗口退役；GUI 收敛为单程序三页签（含「去水印」占位页签），归属新能力 `desktop-gui`。
 **Migration**: 见 `desktop-gui` 新增需求；旧界面参数范围（扫描阈值 10–200、羽化 0–20）延续。
 
 ### Requirement: 命令行批处理

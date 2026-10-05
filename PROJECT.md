@@ -7,11 +7,11 @@
 它把一批拍摄/收集来的徽章照片，处理成可以直接付印的排版页：
 
 1. **抠图** — 自动识别照片中间的圆形徽章，裁出透明背景 PNG；
-2. ~~**去水印**~~（已取消）— 水印处理交操作者用豆包等外部工具在程序外人工完成；
+2. **去水印**（入口占位）— 本版不实现去水印算法；程序保留「去水印」页签与 `watermark` 子命令占位（提示「后续版本提供」），算法留待后续版本；
 3. **排版** — 按模板图上自动识别出的圆形槽位，排成多页 A4 尺寸 PNG。
 
 **当前状态（2026-10-06 起）**：仓库正在按 OpenSpec 提案 `python-pyqt-rewrite` 完全重写为
-**Python + PyQt6 单程序**（一个主窗口两个页签 + CLI 子命令），交付 PyInstaller 单目录绿色包。
+**Python + PyQt6 单程序**（一个主窗口三个页签：抠图 / 排版 / 去水印占位 + CLI 子命令），交付 PyInstaller 单目录绿色包。
 实施进度见 `openspec/changes/python-pyqt-rewrite/tasks.md`；旧实现已整体归档 `legacy/`（只读参考、不参与验收）。
 行为对照的基线是 `golden/` 冻结物，对照命令与容差见 `docs/验收清单.md`。
 
@@ -22,8 +22,8 @@
 
 | 层 | 技术 | 说明 |
 | --- | --- | --- |
-| 桌面 GUI / CLI | Python 3.12 + PyQt6 | 单程序两页签；CLI 子命令（cutout / layout） |
-| 图像算法 | numpy + Pillow | 抠图（扫描 + RANSAC）、排版（连通域槽位识别 + 合成）（水印不在程序内） |
+| 桌面 GUI / CLI | Python 3.12 + PyQt6 | 单程序三页签（含去水印占位）；CLI 子命令（cutout / layout / watermark 占位） |
+| 图像算法 | numpy + Pillow | 抠图（扫描 + RANSAC）、排版（连通域槽位识别 + 合成）（水印本版不实现算法，仅入口占位） |
 | 打包 | PyInstaller（`--onedir --windowed`） | 单目录绿色包，`_internal/` 与 exe 必须整包分发 |
 | 测试 | pytest | 对照用例挂接 `golden/` 金标准 |
 | 环境 | 仓库内 `.venv`（Python 3.12.10） | 依赖精确锁定在 `requirements.txt` |
@@ -38,7 +38,7 @@
 每个处理阶段读写固定的中文名目录，目录名硬编码在参数默认值里（不可重命名）：
 
 - 输入 `原图\` / 输出 `底图\`（抠图）
-- `底图\` 之后的去水印环节不在程序内（交外部人工处理）
+- `底图\` 之后的去水印本版为入口占位（不实现算法；算法后续版本提供）
 - 输入 `底图\` + `排版demo.png` / 输出 `已排版\`（排版）
 
 全部 13 个保留目录名与完整契约见 `openspec/specs/pipeline-orchestration/spec.md`（归档后版本）与
@@ -83,8 +83,8 @@
 ### 三层：core / CLI / GUI 单一实现
 
 - `koutu/core/`：两个能力内核 + 批次执行器（纯逻辑，不 import Qt）
-- `koutu/cli/`：argparse 子命令（`cutout / layout`）+ 统一退出码（0/1/2）
-- `koutu/gui/`：PyQt6 单窗口两页签（后台线程、进度、取消、QSettings 记忆）
+- `koutu/cli/`：argparse 子命令（`cutout / layout / watermark` 占位）+ 统一退出码（0/1/2）
+- `koutu/gui/`：PyQt6 单窗口三页签（抠图 / 排版 / 去水印占位；后台线程、进度、取消、QSettings 记忆）
 
 旧世界的「算法内核 + 双实现」已终止：双实现同步义务随重写结束，等价性由 `golden/` 回归保障。
 
@@ -104,7 +104,7 @@
 ## Domain Context
 
 - **徽章**：圆形金属徽章（珐琅/蚀刻）。实拍照片背景杂乱，圆形之外可能还有飘带、边框、角落图案。
-- **水印（已移出程序范围）**：照片上的淡色平铺水印由操作者用豆包等外部工具人工处理；W3 测绘结论留档 `docs/水印研究.md`（不采用）。
+- **水印（本版入口占位）**：本版不实现去水印算法；程序保留「去水印」页签与 `watermark` 子命令占位（提示「后续版本提供」）；W3 测绘结论留档 `docs/水印研究.md`（供后续版本启动）。
 - **模板**：`排版demo.png`，A4 300dpi 竖版 2480×3508 白底图，上面印有圆形徽章槽位图案（当前 11 个）。
   换版面 = 换这张图，`每页张数` 由模板上的圆的个数决定。
 
@@ -125,13 +125,13 @@
 | Python 3.12.10（仓库 `.venv`） | 源码运行与构建（开发机） | 交付包（PyInstaller）不依赖系统 Python |
 | PyQt6 / numpy / Pillow | GUI 与图像算法 | 版本见 `requirements.txt`（精确锁定） |
 | PyInstaller | 构建绿色包 | 只能源码运行（用 `.venv` 解释器） |
-| ~~本地 ComfyUI / 豆包在线~~ | 旧 AI 去水印路线 | 非目标；水印改用豆包等外部工具人工处理（程序外；`legacy/remove_watermark_ai.py` 仅历史参考） |
+| ~~本地 ComfyUI / 豆包在线~~ | 旧 AI 去水印路线 | 非目标；本版不实现去水印算法（仅入口占位），AI/在线路线不做（`legacy/remove_watermark_ai.py` 仅历史参考） |
 
 ## 构建 / 运行命令
 
 ```powershell
 # 源码运行（开发；koutu/ 包在 W1–W5 波次落地，以下为既定目标形态）
-& D:\workspace\koutu\.venv\Scripts\python.exe -m koutu              # GUI（两页签）
+& D:\workspace\koutu\.venv\Scripts\python.exe -m koutu              # GUI（三页签）
 & D:\workspace\koutu\.venv\Scripts\python.exe -m koutu cutout       # CLI 抠图（批处理）
 & D:\workspace\koutu\.venv\Scripts\python.exe -m pytest tests -q    # 测试（挂 golden）
 

@@ -6,14 +6,14 @@
 - 已就绪的前置：`golden/`（双实现逐字节一致、原仓库零改动、像素级对照脚本与容差草案）、`docs/环境验证.md`（Python 3.12.10 / PyQt6 6.11 / PyInstaller 6.22.3 实测，含中文+空格路径、§7 编码坑、§9 交接要点）、`docs/验收清单.md`（阶段 0–4 判据）、`requirements.txt`（精确锁定）、git（2 个提交、身份 `koutu <koutu@localhost>`）。
 - 本设计对应规格：本变更 7 份 delta（`badge-cutout / badge-layout / watermark-removal / pipeline-orchestration / diagnostics / desktop-gui / packaging-toolchain`）。动机与范围见 `proposal.md`。
 - 补交材料（会话中途落地）：`docs/基线知识.md` 与 `docs/金标准数据.csv` 已逐项对照：抠图/排版参数语义与本文档一致；排版槽位排序已按「包围盒顶边 y → 左边 x」在规格中收紧；`原图_去水印` 等历史目录归入保留名单。
-- 范围变更（2026-10-06，之二）：去水印功能取消（交豆包等外部工具人工处理）；本文相关条目已同步（两页签、W3 留档、阶段 3 取消）。
+- 范围变更（2026-10-06，之二 · 修订）：去水印定为入口占位（本版不实现算法，算法留待后续版本）；本文相关条目已同步（三页签、W3 研究留档、阶段 3 改入口占位验收）。
 
 ## Goals / Non-Goals
 
 **Goals：**
-- 一个可交付目标：单程序（GUI 两页签 + CLI 子命令共享一个核心库），PyInstaller 单目录绿色包。
+- 一个可交付目标：单程序（GUI 三页签 + CLI 子命令共享一个核心库），PyInstaller 单目录绿色包。
 - 抠图、排版按旧参数语义重写，验收全部挂接 `golden/`（容差口径以 `docs/验收清单.md` 与规格为准）。
-- 去水印不在本程序范围（2026-10-06 决定）：水印交操作者用豆包等外部工具人工处理；W3 研究留档不采用，相关规格/任务/验收同步取消。
+- 去水印为入口占位（2026-10-06 决定 · 修订）：本版不实现算法（GUI 页签与 CLI `watermark` 子命令均只提示「后续版本提供」）；W3 研究留档供后续版本启动；验收改为占位判据。
 - 仓库结构收敛：旧实现进 `legacy/`（只归档不删除），验收装置（`docs/`、`tests/`、`golden/`）入库。
 
 **Non-Goals（设计层）：**
@@ -37,8 +37,8 @@ koutu/                 # 正式 Python 包（唯一种子的实现）
     cutout.py layout.py   # 两个能力内核（纯逻辑，不 import Qt）
     imaging.py         # numpy/PIL 像素工具（加载、保存、缩放）
     naming.py          # Windows 自然序（StrCmpLogicalW，ctypes）
-  cli/main.py          # argparse 子命令 + 退出码
-  gui/main_window.py worker.py pages/...   # PyQt6
+  cli/main.py          # argparse 子命令（含 watermark 占位）+ 退出码
+  gui/main_window.py worker.py pages/...   # PyQt6（三页签：抠图 / 排版 / 去水印占位）
 packaging/             # koutu.spec、打包.ps1（UTF-8 BOM）
 legacy/  tests/  golden/  docs/          # 归档 / 装置 / 文档
 ```
@@ -61,7 +61,7 @@ legacy/  tests/  golden/  docs/          # 归档 / 装置 / 文档
 
 ### D4 日志与设置
 
-- 两份日志固定文件名与位置（程序根，UTF-8）：`运行日志.txt`（抠图）、`排版日志.txt`（排版，含槽位分配表）。`_layout_log.txt` 退役；`去水印日志.txt` 不再新增（去水印功能取消）。
+- 两份日志固定文件名与位置（程序根，UTF-8）：`运行日志.txt`（抠图）、`排版日志.txt`（排版，含槽位分配表）。`_layout_log.txt` 退役；`去水印日志.txt` 不再新增（本版无去水印处理）。
 - 统计行 = 内核返回的结构化结果 → 中文行渲染一次，三处同源：GUI 日志视图原文、CLI 控制台（源码版）、日志文件。格式与 golden 基线**语义等价**（数值逐张可核对）。
 - 设置用 `QSettings` 的 `IniFormat`：打包版存程序根 `koutu.ini`（不可写时回退 `%APPDATA%\koutu\koutu.ini`）；源码版存仓库根 `koutu.ini`（gitignore）。记忆：窗口几何、上次页签、各页参数（`cutout/scan-t`、`cutout/feather` 等）。
 - 备选：Windows 注册表默认存储（拒绝：设置不随绿色包搬迁，违背「拷贝即用」习惯）。
@@ -93,7 +93,7 @@ legacy/  tests/  golden/  docs/          # 归档 / 装置 / 文档
 | 0 装置自检 | `golden/checksums/`（数据目录 0 差异；旧工具内容 0 差异，路径映射到 legacy\） | 每次验收前（`golden/scripts/hash-tree.ps1` + `compare-manifests.ps1`） |
 | 1 抠图 | `golden/baseline_products/底图/` + `run_final/运行日志.txt`：文件名集合、宽高、圆心/半径 ±2px、不透明像素 ±0.5%、pixel-diff 草案阈值 | pytest（`tests/`）+ 人工命令 |
 | 2 排版 | `baseline_products/已排版/第1页.png` + `run_final/_layout_log.txt`：2480×3508 精确、页数、分配表逐行、像素阈值 | 同上 |
-| 3 去水印 | **已取消**（功能不在范围；旧输出不作数；W3 研究留档） | — |
+| 3 去水印（占位） | 入口占位判据：页签 / 提示文案 / 目录零动 / CLI 提示可读；原算法指标不定稿（W3 研究留档） | 人工（GUI/CLI 冒烟） |
 | 4 打包 | 环境验证 §5–6 实测口径 + 阶段 1/2 判据在打包版复跑 | 人工 + CLI |
 
 - pytest 侧用 numpy 直接实现与 `pixel-diff.ps1` 相同的口径（阈值同源：`docs/验收清单.md`）；`golden/scripts/` 保留给人工与跨机器复验。两套口径的唯一数值来源是验收清单/规格，评审时核对。
@@ -104,7 +104,7 @@ legacy/  tests/  golden/  docs/          # 归档 / 装置 / 文档
 | --- | --- | --- | --- |
 | `badge-cutout` | 全面取代（双实现/脚本版/旧 GUI 退役） | 旧 10 条 REMOVED + 新 8 条 ADDED | 本变更归档时（`openspec archive`） |
 | `badge-layout` | 全面取代 | 旧 7 条 REMOVED + 新 6 条 ADDED | 同上 |
-| `watermark-removal` | 重新设计取代（AI 路线移除） | 旧 8 条 REMOVED + 新 7 条 ADDED | 同上 |
+| `watermark-removal` | 入口占位取代（本版不实现算法） | 旧 8 条 REMOVED + 新 3 条 ADDED | 同上 |
 | `pipeline-orchestration` | 保留语义、载体更新（单程序入口；豆包流程移除） | 旧 5 条 REMOVED + 新 4 条 ADDED | 同上 |
 | `diagnostics` | 语义收窄保留（装置升级为 golden 脚本 + pytest；探针归档） | 旧 6 条 REMOVED + 新 3 条 ADDED | 同上 |
 
@@ -128,14 +128,14 @@ legacy/  tests/  golden/  docs/          # 归档 / 装置 / 文档
 | 文档 | 更新内容 | 时机 |
 | --- | --- | --- |
 | `AGENTS.md` | 硬约束改写：删「双实现同步」「csc.exe 现场编译」「无包管理/测试框架」；新增单实现 + golden 回归 + pytest + PyInstaller；保留中文契约、程序根定位、Windows-only、编码约定；命令表补 pytest/打包命令 | W0 |
-| `PROJECT.md` | 技术栈（Python 3.12 + PyQt6 + PyInstaller）、架构模式（三层）、编译命令 → 打包命令、去水印章节（改为「不在范围：交外部人工处理」）、「没有的东西」更正（已有 git/pytest/依赖清单） | W0 |
+| `PROJECT.md` | 技术栈（Python 3.12 + PyQt6 + PyInstaller）、架构模式（三层）、编译命令 → 打包命令、去水印章节（改为「入口占位：后续版本提供」）、「没有的东西」更正（已有 git/pytest/依赖清单） | W0 |
 | `openspec/config.yaml` | `context` 改写为重写世界（保留不可改名目录契约、全中文、Windows-only）；`rules.tasks` 的「同步另一侧实现」→「对照 golden 回归」；`operations` 指南更新（apply=pytest+实跑；archive=新规格与实现一致） | W0 |
-| `README.md` | 重写为单程序说明（两页签、CLI、打包、目录契约、验收） | W5 |
+| `README.md` | 重写为单程序说明（三页签：含「去水印」占位、CLI、打包、目录契约、验收） | W5 |
 | `使用说明.txt` | 重写（两能力操作、CLI、常见问题、日志位置）；`排版工具使用说明.txt`、`总结文档.md` 归档 `legacy/docs/` | W5 |
 
 ### D12 迁移与回滚
 
-- 操作者迁移：入口从「多个 exe/bat」变为「一个 `koutu.exe`」；日志收敛为两份固定名（`运行日志.txt` / `排版日志.txt`；`_layout_log.txt` 退役、`去水印日志.txt` 不新增）；去水印不在程序内——水印由操作者用豆包等外部工具人工处理（`doubao` 等保留目录名不变）。
+- 操作者迁移：入口从「多个 exe/bat」变为「一个 `koutu.exe`」；日志收敛为两份固定名（`运行日志.txt` / `排版日志.txt`；`_layout_log.txt` 退役、`去水印日志.txt` 不新增）；去水印为入口占位——GUI 页签与 CLI `watermark` 子命令只提示「后续版本提供」，不处理数据（`doubao`、`无水印*` 等保留目录名不变）。
 - 回滚：旧实现完整保留在 `legacy/`（源码可重建 exe；冻结身份在 `golden/tools/` 与仓库外副本）；若重写版验收不达标，可继续使用旧工具直至问题修复。
 
 ## Risks / Trade-offs
@@ -143,7 +143,7 @@ legacy/  tests/  golden/  docs/          # 归档 / 装置 / 文档
 - **位级一致性风险**（C# 的取样/取整细节 vs numpy 实现）→ 按容差验收（圆心/半径 ±2px、不透明 ±0.5%、像素差草案阈值），W1/W2 逐张记录实测值；不追字节级。
 - **打包版无控制台**，CLI 输出不可见 → 证据改为日志+退出码（先例：旧 winexe 实测 stdout 为空、验收照过）；需要可见性时用源码版或备选孪生 exe。
 - **QSettings 写程序根失败**（只读目录）→ 回退 `%APPDATA%\koutu\`；测试覆盖两种路径。
-- **去水印取消后的预期管理** → 水印交外部工具（豆包）人工处理，程序验收不设去水印阶段（阶段 3 取消）；W3 研究留档避免重复投入。
+- **去水印入口占位的预期管理** → 页签与子命令均明示「后续版本提供」，避免误期待；阶段 3 改为占位验收；W3 研究留档供后续版本启动、避免重复投入。
 - **大体积图片入库**（golden 约 12.1MB）→ 一次性成本；README 已声明该目录就是入库精简集。
 - **归档时机**：W0 移动旧文件后，阶段 0.2 的对照路径需同步更新（内容哈希映射校验），避免「文件搬家」被误判为「工具被改动」。
 - **取消语义**在单张边界生效 → 文档与界面文案写清楚，避免误以为立即中断。
@@ -151,7 +151,7 @@ legacy/  tests/  golden/  docs/          # 归档 / 装置 / 文档
 ## Migration Plan
 
 1. W0：`.gitignore` 修订 → `docs/tests/golden` 入库 → `legacy/` 归档（含验收清单阶段 0.2 更新）→ AGENTS/PROJECT/config 更新；每一步独立提交（中文信息，提交前 `git status` 核对无数据目录/venv）。
-2. W1–W4：模块波次实现（抠图 / 排版 / GUI；去水印已取消），每波带 pytest 对照与实跑核对。
+2. W1–W4：模块波次实现（抠图 / 排版 / GUI；去水印仅入口占位：页签 + `watermark` 占位子命令），每波带 pytest 对照与实跑核对。
 3. W5：打包交付 + 使用说明/README 重写 + 阶段 4 验收。
 4. W6：全量回归 → 修订主规格说明文字 → `openspec archive python-pyqt-rewrite` → 最终汇报。回滚点：任一波次不达标即停在当波修复（不回退已验收的前波）。
 
