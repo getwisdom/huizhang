@@ -19,23 +19,28 @@ doubao/
 
 # ── 日志与探针输出：属于本地验收证据，因机器而异 ──
 运行日志.txt
+去水印日志.txt
 排版日志.txt
 _layout_log.txt
 _probe_*.txt
 _probe_*.csv
+# golden/ 内为冻结证据（run_final 等日志），按原样入库
+!golden/**/运行日志.txt
+!golden/**/排版日志.txt
+!golden/**/_layout_log.txt
 
-# ── 编译产物与分发包：用系统自带 csc.exe 现场重建，见 PROJECT.md ──
+# ── 运行设置（QSettings ini，随程序目录） ──
+koutu.ini
+
+# ── 编译产物与分发包：PyInstaller 产物与本地分发文件不入库 ──
 *.exe
 *.zip
 *.7z
+dist/
+build/
 
-# ── 验收 / 金标准产物：尚未定稿，暂不入库 ──
-# golden/ 是「Python + PyQt6 重写版」对照旧工具的金标准基线，
-# docs/验收清单.md 与 tests/ 属于同一批验收装置。
-# 需要入库时删掉这三行即可（注意 golden/baseline_products/ 含约 11.9MB 徽章成品图）。
-golden/
-docs/
-tests/
+# ── 验收装置（2026-10-06 W0 起入库）：docs / tests / golden 都在版本控制内；
+#    例外：本地 *.exe（含 golden/tools 与 legacy 的旧 exe）维持忽略，可由随库源码重建 ──
 
 # ── Python ──
 __pycache__/
