@@ -1,0 +1,28 @@
+# 抠图工具重写项目 · Python 依赖锁定（地基阶段，2026-10-05 生成）
+#
+# 环境：Windows x64 + Python 3.12.10，虚拟环境位于仓库根 .venv
+# 用途：在 .venv 中恢复完全一致的依赖版本：
+#   D:\workspace\koutu\.venv\Scripts\python.exe -m pip install -r requirements.txt
+# 本机直连官方源很慢（实测 python.org 约 16KB/s），建议追加镜像参数：
+#   -i https://mirrors.huaweicloud.com/repository/pypi/simple
+# 直接依赖（其余均为传递依赖，一并锁定）：
+#   PyQt6 numpy Pillow pytest pyinstaller
+#
+# —— 以下为 pip freeze 原样冻结（勿手改；升级走 .venv 内 pip install 后再重新 freeze）——
+altgraph==0.17.5
+colorama==0.4.6
+iniconfig==2.3.0
+numpy==2.5.3
+packaging==26.3
+pefile==2024.8.26
+pillow==12.3.0
+pluggy==1.6.0
+Pygments==2.21.0
+pyinstaller==6.22.3
+pyinstaller-hooks-contrib==2026.8
+PyQt6==6.11.0
+PyQt6-Qt6==6.11.2
+PyQt6_sip==13.13.0
+pytest==9.1.1
+pywin32-ctypes==0.2.3
+setuptools==84.0.0

@@ -40,6 +40,11 @@ tests/
 # ── Python ──
 __pycache__/
 *.pyc
+.venv/
+.pytest_cache/
+
+# ── spike 探针运行输出：本机证据（日志/截图）不入库；脚本本体 spike/qt_smoke.py 入库 ──
+spike/_out/
 
 # ── 系统杂物 ──
 Thumbs.db
