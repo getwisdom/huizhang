@@ -8,6 +8,8 @@
 - 槽位排序：**包围盒顶边 y 升序、再左边 x 升序**（用包围盒坐标，不是圆心坐标）；
 - 底图：`StrCmpLogicalW` 自然序；alpha>16 包围盒；全透明跳过；扩展名白名单；
 - 合成：画布=模板尺寸、白底、双三次（GDI+ 对齐参数见 `_COMPOSITE_*` 常量，W2 校准）；
+- 定位点（layout-anchors）：从模板搬运每个槽位圆内正上方的小三角补丁（默认开启、可关；
+  换模板无标记时降级跳过并记一句日志）；
 - 页命名 `第N页.png`；写入前清空输出目录旧 `*.png`。
 """
 
@@ -48,6 +50,16 @@ COMPOSITE_ROUND = "half_up"     # "half_up" | "half_even"（实测两者几乎�
 GDI_B = 0.25
 GDI_C = 0.875
 GDI_BOX = 0.75
+
+# —— 定位点（排版输出页小三角）参数（layout-anchors；对照模板实测定稿，见该变更 design.md D1） ——
+# 补丁窗口相对槽位中心（取整后）固定 40×19：x ∈ [cx0-20, cx0+20)，y ∈ [cy0-406, cy0-387)。
+ANCHOR_DX0 = -20
+ANCHOR_DY0 = -406
+ANCHOR_W = 40
+ANCHOR_H = 19
+ANCHOR_DARK_THR = 96    # 暗像素判据：min(R,G,B) < 该值
+ANCHOR_MIN_DARK = 60    # 窗口内暗像素计数下限；低于视为模板无标记 → 降级跳过
+ANCHOR_MODE_DEFAULT = "含底"   # "含底"=原样搬运（默认）；"去底"=仅叠暗笔画（样张对照用）
 
 
 class LayoutError(Exception):
@@ -397,6 +409,57 @@ def _render_slot_patch(
 
 
 # ---------------------------------------------------------------------------
+# 定位点（layout-anchors）：模板小三角补丁搬运 / 降级检测 / 叠加
+# ---------------------------------------------------------------------------
+
+def _anchor_window(slot: Slot):
+    """定位点补丁窗口（页面坐标；源=目标同坐标，见 layout-anchors design.md D1）。"""
+    cx0 = math.floor(slot.cx + 0.5)
+    cy0 = math.floor(slot.cy + 0.5)
+    return cx0 + ANCHOR_DX0, cy0 + ANCHOR_DY0, ANCHOR_W, ANCHOR_H
+
+
+def _anchor_mark_present(template_rgb: np.ndarray, slot: Slot) -> bool:
+    """模板该槽位窗口内是否存在定位点标记（换模板无标记 → False，安全降级）。"""
+    x0, y0, w, h = _anchor_window(slot)
+    x0c = max(0, x0)
+    y0c = max(0, y0)
+    x1c = min(template_rgb.shape[1], x0 + w)
+    y1c = min(template_rgb.shape[0], y0 + h)
+    if x1c <= x0c or y1c <= y0c:
+        return False
+    region = template_rgb[y0c:y1c, x0c:x1c, :3].min(axis=2)
+    return int((region < ANCHOR_DARK_THR).sum()) >= ANCHOR_MIN_DARK
+
+
+def _stamp_anchor(canvas: np.ndarray, template_rgb: np.ndarray, slot: Slot, mode: str) -> None:
+    """把模板中该槽位的定位点补丁叠加到画布（原地）。
+
+    - mode="含底"：补丁 RGB 原样搬运（输出页窗口区域与模板同区域逐像素一致）；
+    - mode="去底"：仅叠暗笔画（alpha = 255 − min(R,G,B)，≥235 视为全透明）。
+    """
+    x0, y0, w, h = _anchor_window(slot)
+    x0c = max(0, x0)
+    y0c = max(0, y0)
+    x1c = min(canvas.shape[1], x0 + w)
+    y1c = min(canvas.shape[0], y0 + h)
+    if x1c <= x0c or y1c <= y0c:
+        return
+    patch = template_rgb[y0c:y1c, x0c:x1c, :3]
+    if mode == "去底":
+        m = patch.min(axis=2).astype(np.int32)
+        alpha = np.clip(255 - m, 0, 255).astype(np.float64) / 255.0
+        alpha[m >= 235] = 0.0
+        sub = canvas[y0c:y1c, x0c:x1c, :3].astype(np.float64)
+        blended = patch.astype(np.float64) * alpha[..., None] + sub * (1.0 - alpha[..., None])
+        canvas[y0c:y1c, x0c:x1c, :3] = np.clip(
+            np.floor(blended + 0.5), 0.0, 255.0
+        ).astype(np.uint8)
+    else:  # 含底（默认）：原样搬运
+        canvas[y0c:y1c, x0c:x1c, :3] = patch
+
+
+# ---------------------------------------------------------------------------
 # 整批运行
 # ---------------------------------------------------------------------------
 
@@ -405,6 +468,8 @@ def run_layout_batch(
     base_dir,
     out_dir,
     *,
+    anchors: bool = True,
+    anchor_mode: str | None = None,
     log_path=None,
     emit=None,
     progress=None,
@@ -437,6 +502,11 @@ def run_layout_batch(
         add(f"识别到 {len(slots)} 个槽位")
         if not slots:
             raise LayoutError("模板上没有识别到圆形槽位,请检查 排版demo.png")
+        mode = anchor_mode or ANCHOR_MODE_DEFAULT
+        anchor_flags = (
+            [_anchor_mark_present(template, s) for s in slots] if anchors else []
+        )
+        anchor_per_page = int(sum(anchor_flags))
 
         infos, skipped = load_base_infos(base_dir)
         add(f"底图数量: {len(infos)}")
@@ -463,6 +533,8 @@ def run_layout_batch(
 
         page_w = template.shape[1]
         page_h = template.shape[0]
+        anchor_drawn = 0
+        pages_drawn = 0
         for p in range(total_pages):
             if cancel is not None and cancel():
                 break
@@ -493,11 +565,27 @@ def run_layout_batch(
                     f"  p{p + 1} slot#{i + 1:>2} "
                     f"({math.floor(slot.cx + 0.5)},{math.floor(slot.cy + 0.5)}) <- {info.name}"
                 )
+            if anchor_per_page:
+                for i in range(per_page):
+                    if anchor_flags[i]:
+                        _stamp_anchor(canvas, template, slots[i], mode)
+                        anchor_drawn += 1
             name = f"第{p + 1}页.png"
             imaging.save_rgba(out_dir / name, canvas)
             add(f"  已生成 {out_dir / name}")
+            pages_drawn += 1
             if progress is not None:
                 progress(p + 1, total_pages)
+        if anchors:
+            if anchor_per_page == 0:
+                add("定位点: 已开启（模板上未检测到标记，已跳过）")
+            else:
+                add(
+                    f"定位点: 已开启（共绘制 {anchor_drawn} 处："
+                    f"每页 {anchor_per_page} 处 × {pages_drawn} 页）"
+                )
+        else:
+            add("定位点: 已关闭")
         add("")
         add("完成。请打开「已排版」文件夹查看结果。")
         summary = LayoutSummary(pages=total_pages, slots=per_page, bases=len(infos))

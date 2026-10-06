@@ -31,6 +31,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_lay.add_argument("--demo", default=paths.DEMO_NAME, help="模板文件（默认 排版demo.png）")
     p_lay.add_argument("--src", default=paths.DIR_BASE, help="输入目录（默认 底图）")
     p_lay.add_argument("--dst", default=paths.DIR_LAYOUT, help="输出目录（默认 已排版）")
+    p_lay.add_argument(
+        "--anchors",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="绘制定位点（默认开启；用 --no-anchors 关闭）",
+    )
 
     # 入口占位：保留命令名，不执行任何处理（watermark-removal 规格）
     sub.add_parser("watermark", help="去水印（入口占位：功能后续版本提供）")
@@ -64,6 +70,7 @@ def _cmd_layout(args, log_dir=None) -> int:
         demo,
         src,
         dst,
+        anchors=args.anchors,
         log_path=log_root / paths.LOG_LAYOUT,
         emit=lambda line: print(line),
     )

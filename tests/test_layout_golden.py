@@ -15,7 +15,8 @@ GOLDEN_LOG = GOLDEN / "logs" / "run_final" / "_layout_log.txt"
 
 def test_layout_golden_page(tmp_path):
     out = tmp_path / "已排版"
-    summary, text = layout.run_layout_batch(DEMO, BASE, out)
+    # 基线对照固定走「关闭定位点」路径（layout-anchors：开关关闭时不退化）
+    summary, text = layout.run_layout_batch(DEMO, BASE, out, anchors=False)
     assert summary.error is None, summary.error
     assert (summary.pages, summary.slots, summary.bases) == (1, 11, 7)
 
@@ -43,3 +44,4 @@ def test_layout_golden_page(tmp_path):
         assert (ours["page"], ours["slot"], ours["file"]) == (exp["page"], exp["slot"], exp["file"])
         assert abs(ours["x"] - exp["x"]) <= 2 and abs(ours["y"] - exp["y"]) <= 2
     assert "共 1 页(每页 11 个槽位)" in text
+    assert "定位点: 已关闭" in text

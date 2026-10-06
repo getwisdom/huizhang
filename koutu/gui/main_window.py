@@ -87,6 +87,7 @@ class MainWindow(QMainWindow):
             root / paths.DEMO_NAME,
             root / paths.DIR_BASE,
             root / paths.DIR_LAYOUT,
+            anchors=bool(page.chk_anchors.isChecked()),
             log_path=root / paths.LOG_LAYOUT,
         )
         self._begin(task, page, "排版")
@@ -195,6 +196,12 @@ class MainWindow(QMainWindow):
             self.cutout_page.spin_feather.setValue(int(s.value("cutout/feather", 4)))
         except (TypeError, ValueError):
             pass
+        try:
+            self.layout_page.chk_anchors.setChecked(
+                bool(s.value("layout/anchors", True, type=bool))
+            )
+        except (TypeError, ValueError):
+            self.layout_page.chk_anchors.setChecked(True)
 
     def save_settings(self) -> None:
         s = self.settings
@@ -202,6 +209,7 @@ class MainWindow(QMainWindow):
         s.setValue("ui/last-tab", self.tabs.currentIndex())
         s.setValue("cutout/scan-t", float(self.cutout_page.spin_scan_t.value()))
         s.setValue("cutout/feather", int(self.cutout_page.spin_feather.value()))
+        s.setValue("layout/anchors", bool(self.layout_page.chk_anchors.isChecked()))
         s.sync()
 
     def closeEvent(self, event) -> None:  # noqa: N802（Qt 覆写）

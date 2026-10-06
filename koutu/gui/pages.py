@@ -10,6 +10,7 @@ from pathlib import Path
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QDoubleSpinBox,
     QFormLayout,
     QHBoxLayout,
@@ -125,7 +126,10 @@ class CutoutPage(TaskPage):
 
 
 class LayoutPage(TaskPage):
-    """排版页签：模板 + 底图 → 已排版（每页张数由模板槽位数决定）。"""
+    """排版页签：模板 + 底图 → 已排版（每页张数由模板槽位数决定）。
+
+    参数面：「添加定位点」勾选框（默认勾选；QSettings 记忆；任务运行中禁用）。
+    """
 
     start_text = "开始排版"
 
@@ -134,6 +138,20 @@ class LayoutPage(TaskPage):
         self.ed_demo = self.add_path_row("模板（排版demo.png）：", self.root / paths.DEMO_NAME)
         self.ed_src = self.add_path_row("输入（底图）：", self.root / paths.DIR_BASE)
         self.ed_dst = self.add_path_row("输出（已排版）：", self.root / paths.DIR_LAYOUT)
+
+        self.chk_anchors = QCheckBox("添加定位点", self)
+        self.chk_anchors.setChecked(True)
+        params = QWidget(self)
+        row = QHBoxLayout(params)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.addWidget(self.chk_anchors)
+        row.addStretch(1)
+        self.form.addRow("参数：", params)
+
+    def set_busy(self, busy: bool, active: bool) -> None:
+        """运行态：定位点勾选框随任务禁用（layout-anchors）。"""
+        super().set_busy(busy, active)
+        self.chk_anchors.setEnabled(not busy)
 
 
 class WatermarkPage(QWidget):

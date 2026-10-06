@@ -44,3 +44,30 @@ def test_cli_layout_missing_demo_exit1(tmp_path):
     assert code == 1
     text = (tmp_path / "排版日志.txt").read_text(encoding="utf-8-sig")
     assert "错误: 找不到模板文件" in text
+
+
+def test_cli_layout_anchors_switch(tmp_path):
+    """--anchors/--no-anchors：默认开启；--no-anchors 关闭（日志可辨）。"""
+    demo = tmp_path / "demo.png"
+    _mini_template(demo)
+    src = tmp_path / "底图"
+    src.mkdir()
+    helpers.make_badge_image(src, "1.png", size=400, cx=200, cy=200, r=150)
+    dst = tmp_path / "已排版"
+
+    code = cli_main(
+        ["layout", "--no-anchors", "--demo", str(demo), "--src", str(src), "--dst", str(dst)],
+        log_dir=tmp_path,
+    )
+    assert code == 0
+    text = (tmp_path / "排版日志.txt").read_text(encoding="utf-8-sig")
+    assert "定位点: 已关闭" in text
+    assert (dst / "第1页.png").is_file()
+
+    code2 = cli_main(
+        ["layout", "--demo", str(demo), "--src", str(src), "--dst", str(dst)],
+        log_dir=tmp_path,
+    )
+    assert code2 == 0
+    text2 = (tmp_path / "排版日志.txt").read_text(encoding="utf-8-sig")
+    assert "定位点: 已开启（模板上未检测到标记，已跳过）" in text2  # 小模板无标记 → 降级

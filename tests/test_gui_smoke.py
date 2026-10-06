@@ -85,9 +85,24 @@ def test_layout_end_to_end_offscreen(qapp, monkeypatch, tmp_path, repo_root):
     page = win.layout_page
     page.btn_start.click()
 
+    assert not page.btn_start.isEnabled()  # 运行中：禁止再次启动
+    assert not page.chk_anchors.isEnabled()  # 运行中：定位点勾选框禁用
+
     assert helpers.pump_until(qapp, lambda: "完成" in page.status.text(), timeout=60.0)
     text = page.log.toPlainText()
     assert "识别到 11 个槽位" in text
+    assert "定位点: 已开启" in text
     assert "<- 1.png" in text
     assert (tmp_path / "已排版" / "第1页.png").is_file()
     assert (tmp_path / "排版日志.txt").is_file()
+    assert helpers.pump_until(qapp, lambda: page.chk_anchors.isEnabled())  # 结束后恢复
+
+
+def test_layout_anchors_default_and_memory(qapp, monkeypatch, tmp_path):
+    win = _mk_window(monkeypatch, tmp_path)
+    assert win.layout_page.chk_anchors.isChecked() is True  # 默认勾选
+    win.layout_page.chk_anchors.setChecked(False)
+    win.save_settings()
+
+    win2 = _mk_window(monkeypatch, tmp_path)
+    assert win2.layout_page.chk_anchors.isChecked() is False  # 记忆保持
