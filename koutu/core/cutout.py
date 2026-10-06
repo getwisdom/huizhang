@@ -368,15 +368,15 @@ def run_cutout_batch(
     on_progress=None,
     cancel=None,
 ):
-    """批处理抠图：返回 (BatchSummary, 日志全文)。"""
+    """批处理抠图：返回 (BatchSummary, 日志全文)。
+
+    日志口径（flexible-io D6）：记完整输入/输出路径；成功/失败/取消都落盘并带
+    中文状态行；任务开始前给出同名覆盖计数提示（不打断）。
+    """
     from ..logging_zh import fmt_num, write_log_file
 
     src_dir = Path(src_dir)
     dst_dir = Path(dst_dir)
-    src_dir.mkdir(parents=True, exist_ok=True)
-    dst_dir.mkdir(parents=True, exist_ok=True)
-    files = list_images(src_dir)
-
     lines: list[str] = []
 
     def add(text: str) -> None:
@@ -384,35 +384,56 @@ def run_cutout_batch(
         if emit is not None:
             emit(text)
 
-    add("徽章抠图工具")
-    add(f"原图: {src_dir} ({len(files)} 张)")
-    add(f"输出: {dst_dir}")
-    add(f"参数: 扫描阈值={fmt_num(scan_t)}  羽化={feather}px  边距={margin}px")
-    add("------------------------------")
+    def write_now() -> None:
+        if log_path is not None:
+            write_log_file(log_path, "\n".join(lines) + "\n")
 
-    if not files:
-        add("[提示] 原图文件夹里没有图片文件")
+    try:
+        src_dir.mkdir(parents=True, exist_ok=True)
+        dst_dir.mkdir(parents=True, exist_ok=True)
+        files = list_images(src_dir)
 
-    def process_one(src_file: Path) -> str:
-        out_path = dst_dir / (src_file.stem + ".png")
-        res = process_image(src_file, out_path, scan_t, feather, margin)
-        if res.ok:
-            add(f"[完成] {src_file.name} -> {res.out_name}  ({res.stat_line})")
-            return f"[完成] {src_file.name}"
-        add(f"[失败] {src_file.name}  {res.error}")
-        return f"[失败] {src_file.name}"
+        add("徽章抠图工具")
+        add(f"原图: {src_dir} ({len(files)} 张)")
+        add(f"输出: {dst_dir}")
+        add(f"参数: 扫描阈值={fmt_num(scan_t)}  羽化={feather}px  边距={margin}px")
+        overwrite = sum(1 for f in files if (dst_dir / f"{f.stem}.png").is_file())
+        add(f"运行前: 输入 {len(files)} 张；同名覆盖 {overwrite} 个；抠图不清理输出目录")
+        add("------------------------------")
 
-    summary = execute_batch(
-        files, process_one, emit=None, on_progress=on_progress, cancel=cancel
-    )
-    # execute_batch 负责计数；上面 process_one 已负责输出行（避免重复 emit）
-    lines.append("------------------------------")
-    lines.append(f"全部完成：成功 {summary.ok} 张，失败 {summary.fail} 张")
-    if emit is not None:
-        emit("------------------------------")
-        emit(f"全部完成：成功 {summary.ok} 张，失败 {summary.fail} 张")
+        if not files:
+            add("[提示] 原图文件夹里没有图片文件")
+
+        def process_one(src_file: Path) -> str:
+            out_path = dst_dir / (src_file.stem + ".png")
+            res = process_image(src_file, out_path, scan_t, feather, margin)
+            if res.ok:
+                add(f"[完成] {src_file.name} -> {res.out_name}  ({res.stat_line})")
+                return f"[完成] {src_file.name}"
+            add(f"[失败] {src_file.name}  {res.error}")
+            return f"[失败] {src_file.name}"
+
+        summary = execute_batch(
+            files, process_one, emit=None, on_progress=on_progress, cancel=cancel
+        )
+        # execute_batch 负责计数；上面 process_one 已负责输出行（避免重复 emit）
+        lines.append("------------------------------")
+        if summary.cancelled:
+            tail = f"已取消：成功 {summary.ok} 张，失败 {summary.fail} 张"
+        else:
+            tail = f"全部完成：成功 {summary.ok} 张，失败 {summary.fail} 张"
+        lines.append(tail)
+        if emit is not None:
+            emit("------------------------------")
+            emit(tail)
+    except Exception as exc:  # 兜底：任何异常也落盘本次日志并带中文状态行（D6）
+        if not any(line.startswith("原图:") for line in lines):
+            add(f"原图: {src_dir}")
+            add(f"输出: {dst_dir}")
+        add(f"错误: 未预期错误（{type(exc).__name__}）")
+        write_now()
+        raise
 
     text = "\n".join(lines) + "\n"
-    if log_path is not None:
-        write_log_file(log_path, text)
+    write_now()
     return summary, text

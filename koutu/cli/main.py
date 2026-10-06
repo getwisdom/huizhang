@@ -78,6 +78,8 @@ def _cmd_layout(args, log_dir=None) -> int:
         dst,
         anchors=args.anchors,
         anchor_style=args.anchor_style,
+        # 安全规则（flexible-io D3）：仅默认「已排版」清空旧 *.png；自定义目录只写不删
+        clean_old=paths.is_default_layout_dir(dst),
         log_path=log_root / paths.LOG_LAYOUT,
         emit=lambda line: print(line),
     )

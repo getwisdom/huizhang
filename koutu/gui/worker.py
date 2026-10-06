@@ -65,8 +65,14 @@ def make_cutout_task(src, dst, *, scan_t, feather, margin, log_path) -> Callable
     return task
 
 
-def make_layout_task(demo, src, dst, *, anchors=True, anchor_style=None, log_path) -> Callable:
-    """构造排版任务闭包；取消在「单页边界」生效，返回实际生成页数。"""
+def make_layout_task(
+    demo, src, dst, *, anchors=True, anchor_style=None, clean_old=True, log_path
+) -> Callable:
+    """构造排版任务闭包；取消在「单页边界」生效，返回实际生成页数。
+
+    clean_old 由调用方按 `paths.is_default_layout_dir(dst)` 判定后传入：
+    仅默认「已排版」清空旧 *.png（flexible-io D3）。
+    """
     style = anchor_style or layout_core.ANCHOR_STYLE_TRIANGLE
 
     def task(emit, progress, cancel):
@@ -87,6 +93,7 @@ def make_layout_task(demo, src, dst, *, anchors=True, anchor_style=None, log_pat
             dst,
             anchors=anchors,
             anchor_style=style,
+            clean_old=clean_old,
             log_path=log_path,
             emit=emit,
             progress=progress2,
@@ -94,6 +101,6 @@ def make_layout_task(demo, src, dst, *, anchors=True, anchor_style=None, log_pat
         )
         if summary.error is not None:
             return state["done"], 1, False
-        return state["done"], 0, state["cancelled"]
+        return state["done"], 0, bool(state["cancelled"] or summary.cancelled)
 
     return task

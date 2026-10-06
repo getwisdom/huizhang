@@ -2,6 +2,7 @@
 
 文案与禁用态口径见本变更 desktop-gui / watermark-removal delta：
 - 「去水印」为入口占位页签：显示「后续版本提供」类中文说明、占位禁用态、不执行任何处理。
+- 输入/输出目录行可编辑（浏览… / 恢复默认），任务运行期间禁用（flexible-io D1）。
 """
 
 from __future__ import annotations
@@ -27,17 +28,18 @@ from PyQt6.QtWidgets import (
 
 from .. import paths
 from ..core import layout as layout_core
+from .dirselect import DirRow
 
 
 class TaskPage(QWidget):
-    """抠图 / 排版共用骨架：只读路径展示 + 按钮 + 进度 + 日志（显示统计行原文）。"""
+    """抠图 / 排版共用骨架：目录行 + 按钮 + 进度 + 日志（显示统计行原文）。"""
 
     start_text = "开始处理"
 
     def __init__(self, root: Path, parent=None):
         super().__init__(parent)
         self.root = Path(root)
-        self.ed_paths: list[QLineEdit] = []
+        self.dir_rows: list[DirRow] = []
 
         self.form = QFormLayout()
         self.btn_start = QPushButton(self.start_text, self)
@@ -69,18 +71,27 @@ class TaskPage(QWidget):
         lay.addWidget(self.log, 1)
 
     # ------------------------------------------------------------- 构造辅助
-    def add_path_row(self, label: str, value: Path) -> QLineEdit:
+    def add_path_row(
+        self, label: str, value: Path, *, selectable: bool = False, is_output: bool = False
+    ):
+        """路径行：selectable=True 用可编辑目录行（浏览…/恢复默认），否则只读展示。"""
+        if selectable:
+            row = DirRow(self.root, Path(value), is_output=is_output, parent=self)
+            self.form.addRow(label, row)
+            self.dir_rows.append(row)
+            return row
         ed = QLineEdit(str(value), self)
         ed.setReadOnly(True)
         self.form.addRow(label, ed)
-        self.ed_paths.append(ed)
         return ed
 
     # ------------------------------------------------------------- 运行态/内容
     def set_busy(self, busy: bool, active: bool) -> None:
-        """busy=有任务在跑；active=本页签是当前任务页。"""
+        """busy=有任务在跑；active=本页签是当前任务页。运行期间目录行一并禁用。"""
         self.btn_start.setEnabled(not busy)
         self.btn_cancel.setEnabled(busy and active)
+        for row in self.dir_rows:
+            row.setEnabled(not busy)
 
     def append_log(self, text: str) -> None:
         self.log.appendPlainText(text)
@@ -103,8 +114,12 @@ class CutoutPage(TaskPage):
 
     def __init__(self, root: Path, parent=None):
         super().__init__(root, parent)
-        self.ed_src = self.add_path_row("输入（原图）：", self.root / paths.DIR_INPUT)
-        self.ed_dst = self.add_path_row("输出（底图）：", self.root / paths.DIR_BASE)
+        self.ed_src = self.add_path_row(
+            "输入（原图）：", self.root / paths.DIR_INPUT, selectable=True
+        )
+        self.ed_dst = self.add_path_row(
+            "输出（底图）：", self.root / paths.DIR_BASE, selectable=True, is_output=True
+        )
 
         self.spin_scan_t = QDoubleSpinBox(self)
         self.spin_scan_t.setRange(10.0, 200.0)
@@ -139,8 +154,12 @@ class LayoutPage(TaskPage):
     def __init__(self, root: Path, parent=None):
         super().__init__(root, parent)
         self.ed_demo = self.add_path_row("模板（排版demo.png）：", self.root / paths.DEMO_NAME)
-        self.ed_src = self.add_path_row("输入（底图）：", self.root / paths.DIR_BASE)
-        self.ed_dst = self.add_path_row("输出（已排版）：", self.root / paths.DIR_LAYOUT)
+        self.ed_src = self.add_path_row(
+            "输入（底图）：", self.root / paths.DIR_BASE, selectable=True
+        )
+        self.ed_dst = self.add_path_row(
+            "输出（已排版）：", self.root / paths.DIR_LAYOUT, selectable=True, is_output=True
+        )
 
         self.chk_anchors = QCheckBox("添加定位点", self)
         self.chk_anchors.setChecked(True)

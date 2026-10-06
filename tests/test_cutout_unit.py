@@ -61,3 +61,57 @@ def test_cutout_empty_dir(tmp_path):
     summary, text = cutout.run_cutout_batch(src_dir, tmp_path / "dst")
     assert summary.ok == 0 and summary.fail == 0
     assert "[提示] 原图文件夹里没有图片文件" in text
+
+
+def test_cutout_cancel_status_line(tmp_path):
+    """取消：日志含「已取消：成功 X 张，失败 Y 张」（flexible-io D6）。"""
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+    for i in range(1, 4):
+        helpers.make_badge_image(src_dir, f"{i}.png")
+    calls = {"n": 0}
+
+    def cancel():
+        calls["n"] += 1
+        return calls["n"] > 1  # 第 1 张后取消
+
+    summary, text = cutout.run_cutout_batch(
+        src_dir, tmp_path / "dst", log_path=tmp_path / "log.txt", cancel=cancel
+    )
+    assert summary.cancelled is True
+    assert summary.ok == 1
+    assert "已取消：成功 1 张，失败 0 张" in text
+    assert "全部完成" not in text
+    assert (tmp_path / "dst" / "1.png").is_file()
+    assert not (tmp_path / "dst" / "3.png").exists()
+    content = (tmp_path / "log.txt").read_text(encoding="utf-8-sig")
+    assert "已取消：成功 1 张，失败 0 张" in content
+
+
+def test_cutout_run_precheck_line(tmp_path):
+    """运行前计数提示：输入张数与同名覆盖数（flexible-io D4）。"""
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+    helpers.make_badge_image(src_dir, "a.png")
+    helpers.make_badge_image(src_dir, "b.png")
+    dst = tmp_path / "dst"
+    dst.mkdir()
+    helpers.make_badge_image(dst, "a.png")  # 同名产物预置 → 应计 1 个
+
+    summary, text = cutout.run_cutout_batch(src_dir, dst)
+    assert summary.ok == 2
+    assert "运行前: 输入 2 张；同名覆盖 1 个；抠图不清理输出目录" in text
+
+
+def test_cutout_unexpected_error_writes_log(tmp_path):
+    """未预期异常：日志兜底落盘并带中文「错误:」行与完整输入路径（flexible-io D6）。"""
+    import pytest
+
+    bad_src = tmp_path / "其实是个文件"
+    bad_src.write_text("not a dir", encoding="utf-8")
+    log = tmp_path / "log.txt"
+    with pytest.raises(OSError):
+        cutout.run_cutout_batch(bad_src, tmp_path / "dst", log_path=log)
+    content = log.read_text(encoding="utf-8-sig")
+    assert "错误: 未预期错误" in content
+    assert str(bad_src) in content  # 兜底时补记完整输入路径

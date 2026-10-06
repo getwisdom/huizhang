@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -40,6 +41,7 @@ MIN_SLOT_RADIUS = 300.0
 # —— 底图参数 ——
 ALPHA_BBOX_THRESHOLD = 16
 BASE_EXTS = (".png", ".jpg", ".jpeg", ".bmp", ".gif")
+TOOL_PAGE_NAME_RE = re.compile(r"第\d+页\.png")  # 本工具产物页名（自定义目录旧页计数用）
 
 # —— 合成参数（W2 校准结论：与 GDI+ DrawImage 的像素对齐，见 docs/汇报/07） ——
 COMPOSITE_CONVENTION = "edge"   # "edge" | "center"
@@ -112,6 +114,7 @@ class LayoutSummary:
     slots: int = 0
     bases: int = 0
     error: str | None = None
+    cancelled: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -621,12 +624,18 @@ def run_layout_batch(
     *,
     anchors: bool = True,
     anchor_style: str = ANCHOR_STYLE_TRIANGLE,
+    clean_old: bool = True,
     log_path=None,
     emit=None,
     progress=None,
     cancel=None,
 ):
-    """排版批处理。返回 (LayoutSummary, 日志文本)；日志可选落盘（UTF-8 BOM）。"""
+    """排版批处理。返回 (LayoutSummary, 日志文本)；日志可选落盘（UTF-8 BOM）。
+
+    clean_old：写入前是否清空输出目录旧 `*.png`（默认 True = 维持现状）。
+    调用方（GUI / CLI）用 `paths.is_default_layout_dir(dst)` 判定：仅默认「已排版」
+    传 True；自定义输出目录传 False（只写不删，日志记录同名覆盖/旧页计数）。
+    """
     demo_path = Path(demo_path)
     base_dir = Path(base_dir)
     out_dir = Path(out_dir)
@@ -641,13 +650,18 @@ def run_layout_batch(
     try:
         add("======== 徽章排版工具 ========")
         add(
-            f"模板: {demo_path.name}   输入: {base_dir.name}\\*.png   "
-            f"输出: {out_dir.name}\\第N页.png"
+            f"模板: {demo_path}   输入: {base_dir}\\*.png   "
+            f"输出: {out_dir}\\第N页.png"
         )
         add("")
         if not demo_path.is_file():
-            raise LayoutError(f"找不到模板文件 {demo_path.name}")
-        template = imaging.load_rgb(demo_path)
+            raise LayoutError(f"找不到模板文件 {demo_path}")
+        try:
+            template = imaging.load_rgb(demo_path)
+        except Exception as exc:  # 坏模板：统一包装中文（不直出英文原文，见 14 号评审 P1-4/E2）
+            raise LayoutError(
+                f"模板文件打不开：{demo_path}（不是有效的图片，或文件已损坏）"
+            ) from exc
         add(f"模板: {template.shape[1]}x{template.shape[0]}")
         slots, detect_step = detect_slots_ex(template)
         if detect_step == STEP:
@@ -682,18 +696,34 @@ def run_layout_batch(
         add(f"共 {total_pages} 页(每页 {per_page} 个槽位)")
 
         out_dir.mkdir(parents=True, exist_ok=True)
-        for old in list(out_dir.glob("*.png")):
-            try:
-                old.unlink()
-            except OSError:
-                pass
+        existing_pngs = [p for p in out_dir.glob("*.png") if p.is_file()]
+        planned = {f"第{n}页.png" for n in range(1, total_pages + 1)}
+        overwrite = sum(1 for p in existing_pngs if p.name in planned)
+        old_pages = sum(1 for p in existing_pngs if TOOL_PAGE_NAME_RE.fullmatch(p.name))
+        if clean_old:
+            add(
+                f"运行前: 有效底图 {len(infos)} 张；同名覆盖 {overwrite} 个；"
+                f"将清空旧 *.png {len(existing_pngs)} 张（默认输出目录）"
+            )
+            for old in existing_pngs:
+                try:
+                    old.unlink()
+                except OSError:
+                    pass
+        else:
+            add(
+                f"运行前: 有效底图 {len(infos)} 张；同名覆盖 {overwrite} 个；"
+                f"检测到本工具旧页 {old_pages} 张（自定义输出目录，不清理）"
+            )
 
         page_w = template.shape[1]
         page_h = template.shape[0]
         anchor_drawn = 0
         pages_drawn = 0
+        cancelled = False
         for p in range(total_pages):
             if cancel is not None and cancel():
+                cancelled = True
                 break
             canvas = np.full((page_h, page_w, 4), 255, dtype=np.uint8)
             for i in range(per_page):
@@ -742,12 +772,24 @@ def run_layout_batch(
             )
         else:
             add("定位点: 已关闭")
-        add("")
-        add("完成。请打开「已排版」文件夹查看结果。")
-        summary = LayoutSummary(pages=total_pages, slots=per_page, bases=len(infos))
+        if cancelled:
+            add(f"已取消：已生成 {pages_drawn}/{total_pages} 页")
+        else:
+            add("")
+            add("完成。请打开「已排版」文件夹查看结果。")
+        summary = LayoutSummary(
+            pages=pages_drawn if cancelled else total_pages,
+            slots=per_page,
+            bases=len(infos),
+            cancelled=cancelled,
+        )
     except LayoutError as exc:
         add(f"错误: {exc}")
         summary.error = str(exc)
+    except Exception as exc:  # 兜底：无论何种异常都落盘本次日志并带中文状态行（D6）
+        msg = f"未预期错误（{type(exc).__name__}）"
+        add(f"错误: {msg}")
+        summary.error = msg
 
     text = "\n".join(lines) + "\n"
     if log_path is not None:

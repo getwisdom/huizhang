@@ -32,3 +32,12 @@ def resolve_dir(root, value) -> Path:
     """相对路径按程序根解析；绝对路径直接使用。"""
     p = Path(value)
     return p if p.is_absolute() else Path(root) / p
+
+
+def is_default_layout_dir(dst) -> bool:
+    """排版清理安全规则（flexible-io D3）：输出目录是否等于默认的「已排版」。
+
+    以解析后的绝对路径判定（不论是否经选择器选中）；GUI 与 CLI 共用同一判定，
+    保证两入口同语义：仅默认输出目录保留「写入前清空旧 *.png」。
+    """
+    return Path(dst).resolve() == (program_root() / DIR_LAYOUT).resolve()

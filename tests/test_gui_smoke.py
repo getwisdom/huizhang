@@ -34,9 +34,11 @@ def test_cutout_params_paths_and_auto_dirs(qapp, monkeypatch, tmp_path):
     assert p.spin_feather.minimum() == 0 and p.spin_feather.maximum() == 20
     assert p.spin_feather.value() == 4
 
-    assert p.ed_src.isReadOnly() and p.ed_dst.isReadOnly()
+    # flexible-io D1：输入/输出为可编辑目录行（原只读断言已按 design D1 改写）
+    assert not p.ed_src.edit.isReadOnly() and not p.ed_dst.edit.isReadOnly()
     assert p.ed_src.text() == str(tmp_path / "原图")
     assert p.ed_dst.text() == str(tmp_path / "底图")
+    assert win.layout_page.ed_demo.isReadOnly()  # 模板行保持只读展示
     # 首次启动自动创建「原图」「底图」
     assert (tmp_path / "原图").is_dir() and (tmp_path / "底图").is_dir()
 
@@ -70,6 +72,7 @@ def test_cutout_end_to_end_offscreen(qapp, monkeypatch, tmp_path):
     text = page.log.toPlainText()
     assert "[完成] badge.png" in text
     assert "全部完成：成功 1 张，失败 0 张" in text
+    assert "运行前: 输入 1 张；同名覆盖 0 个；抠图不清理输出目录" in text  # 运行前计数提示（flexible-io D4）
     assert (tmp_path / "底图" / "badge.png").is_file()
     assert (tmp_path / "运行日志.txt").is_file()
 
@@ -94,6 +97,7 @@ def test_layout_end_to_end_offscreen(qapp, monkeypatch, tmp_path, repo_root):
     assert "识别到 11 个槽位" in text
     assert "定位点: 已开启" in text
     assert "<- 1.png" in text
+    assert "运行前: 有效底图 1 张" in text and "将清空旧 *.png" in text  # 默认目录提示（flexible-io D4）
     assert (tmp_path / "已排版" / "第1页.png").is_file()
     assert (tmp_path / "排版日志.txt").is_file()
     assert helpers.pump_until(qapp, lambda: page.chk_anchors.isEnabled())  # 结束后恢复

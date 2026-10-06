@@ -86,10 +86,11 @@ def test_mini_end_to_end_and_clear_old(tmp_path):
     # 重复运行：旧页先清空（塞一个旧文件应被删除）
     stale = out / "旧页.png"
     stale.write_bytes(b"stale")
-    summary2, _ = layout.run_layout_batch(demo, base, out)
+    summary2, text2 = layout.run_layout_batch(demo, base, out)
     assert summary2.pages == 2
     assert not stale.exists()
     assert (out / "第1页.png").is_file() and (out / "第2页.png").is_file()
+    assert "将清空旧 *.png 3 张（默认输出目录）" in text2  # 默认目录保留清空（flexible-io B 组）
 
 
 def test_skip_empty_base_and_count(tmp_path):
@@ -115,3 +116,74 @@ def test_alloc_line_format(tmp_path):
     summary, text = layout.run_layout_batch(demo, base, tmp_path / "已排版")
     assert summary.error is None
     assert "  p1 slot# 1 (400,400) <- 7.png" in text
+
+
+def test_custom_dir_no_clean_only_write(tmp_path):
+    """自定义输出目录：只写不删（用户文件保留），日志记录覆盖/旧页计数（flexible-io B 组）。"""
+    demo = _mini_template(tmp_path)
+    base = tmp_path / "底图"
+    base.mkdir()
+    helpers.make_badge_image(base, "1.png", size=400, cx=200, cy=200, r=150)
+    out = tmp_path / "自定义 输出"
+    out.mkdir()
+    (out / "我的照片.png").write_bytes(b"user-photo")
+    (out / "笔记.txt").write_text("notes", encoding="utf-8")
+    (out / "第1页.png").write_bytes(b"old-page-1")
+    (out / "第9页.png").write_bytes(b"old-page-9")
+
+    summary, text = layout.run_layout_batch(demo, base, out, clean_old=False)
+    assert summary.error is None
+    assert (out / "我的照片.png").is_file()
+    assert (out / "笔记.txt").is_file()
+    assert (out / "第9页.png").is_file()  # 旧页不清理
+    assert (out / "第1页.png").read_bytes() != b"old-page-1"  # 同名覆盖为本次产物
+    assert helpers.load_rgba(out / "第1页.png").shape == (800, 800, 4)
+    assert (
+        "运行前: 有效底图 1 张；同名覆盖 1 个；检测到本工具旧页 2 张（自定义输出目录，不清理）"
+        in text
+    )
+
+
+def test_cancel_writes_status_line(tmp_path):
+    """取消：日志按实际生成页数收束，含「已取消：已生成 X/Y 页」（flexible-io D6）。"""
+    demo = _mini_template(tmp_path)
+    base = tmp_path / "底图"
+    base.mkdir()
+    for i in range(1, 4):
+        helpers.make_badge_image(base, f"{i}.png", size=400, cx=200, cy=200, r=150)
+    out = tmp_path / "已排版"
+    log = tmp_path / "排版日志.txt"
+    calls = {"n": 0}
+
+    def cancel():
+        calls["n"] += 1
+        return calls["n"] > 1  # 第 1 页后取消
+
+    summary, text = layout.run_layout_batch(demo, base, out, cancel=cancel, log_path=log)
+    assert summary.error is None
+    assert summary.cancelled is True
+    assert summary.pages == 1  # 汇总按实际发生值（只生成了 1 页）
+    assert "已取消：已生成 1/3 页" in text
+    assert "完成。请打开" not in text
+    assert (out / "第1页.png").is_file()
+    assert not (out / "第2页.png").exists()
+    content = log.read_text(encoding="utf-8-sig")
+    assert "已取消：已生成 1/3 页" in content
+
+
+def test_broken_template_writes_cn_log(tmp_path):
+    """损坏模板：中文错误 + 日志兜底落盘（flexible-io D6；14 号评审 E2）。"""
+    demo = tmp_path / "坏模板.png"
+    demo.write_bytes(b"not-a-real-png")
+    log = tmp_path / "排版日志.txt"
+    summary, text = layout.run_layout_batch(
+        demo, tmp_path / "底图", tmp_path / "已排版", log_path=log
+    )
+    assert summary.error is not None
+    assert "模板文件打不开" in summary.error
+    assert "不是有效的图片" in summary.error
+    assert "错误: 模板文件打不开" in text
+    assert str(demo) in text  # 完整路径
+    content = log.read_text(encoding="utf-8-sig")
+    assert "错误: 模板文件打不开" in content
+    assert "cannot identify" not in content  # 不直出英文异常原文
