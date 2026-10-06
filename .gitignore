@@ -31,6 +31,8 @@ _probe_*.csv
 # 数据目录同名的基线子目录（底图/、已排版/）在 golden 内反忽略
 !golden/baseline_products/底图/
 !golden/baseline_products/已排版/
+# 抠图夹具（2026-10-06 装置维护① 入库）：与数据目录同名的 原图/ 在 golden/fixtures 内反忽略
+!golden/fixtures/原图/
 
 # ── 运行设置（QSettings ini，随程序目录） ──
 koutu.ini

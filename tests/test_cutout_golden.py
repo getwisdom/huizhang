@@ -1,4 +1,4 @@
-"""抠图金标准对照（阶段 1 判据）：逐张核对尺寸、圆心/半径、像素级容差。"""
+"""抠图金标准对照（阶段 1 判据）：输入取入库夹具 `golden/fixtures/原图/`（2026-10-06 起与使用者数据目录解耦，见 `docs/验收清单.md` 阶段 1），逐张核对尺寸、圆心/半径、像素级容差。"""
 
 from pathlib import Path
 
@@ -9,7 +9,7 @@ from koutu.core import cutout
 
 REPO = Path(__file__).resolve().parents[1]
 GOLDEN = REPO / "golden"
-SRC_DIR = REPO / "原图"
+SRC_DIR = GOLDEN / "fixtures" / "原图"
 
 
 def test_cutout_golden_batch(tmp_path):
@@ -18,11 +18,11 @@ def test_cutout_golden_batch(tmp_path):
     assert len(expected) == 7, "基线日志应含 7 条 [完成]"
 
     if not SRC_DIR.is_dir():
-        pytest.skip("原图数据目录不存在")
+        pytest.skip("夹具目录不存在（golden/fixtures/原图）")
     source_files = {p.name: p for p in SRC_DIR.glob("*.jpg")}
     missing = [n for n in expected if n not in source_files]
     if missing:
-        pytest.skip(f"缺少源图: {missing}")
+        pytest.skip(f"缺少夹具源图: {missing}")
 
     results = {}
     for name in expected:
