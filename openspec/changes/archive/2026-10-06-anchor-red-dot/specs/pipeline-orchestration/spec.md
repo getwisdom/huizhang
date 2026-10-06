@@ -6,7 +6,7 @@
 
 ## MODIFIED Requirements
 
-### Requirement: 排版定位点 CLI 开关与样式
+### Requirement: 排版定位点 CLI 开关
 `koutu layout` SHALL 提供 `--anchors / --no-anchors`（控制是否在输出页绘制定位点，默认开启）与 `--anchor-style {triangle,dot}`（定位点样式：`triangle` = 黑三角（默认）、`dot` = 红点），语义与 GUI「添加定位点」勾选框及「样式」下拉一致（同一默认值、同一内核行为）；`--help` 中的说明 SHALL 为中文；非法的样式取值 SHALL 由 argparse 以退出码 2 拒绝且不生成任何页面。
 
 #### Scenario: 默认开启

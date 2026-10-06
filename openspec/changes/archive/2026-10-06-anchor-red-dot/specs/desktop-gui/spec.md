@@ -6,7 +6,7 @@
 
 ## MODIFIED Requirements
 
-### Requirement: 排版定位点开关与样式（勾选框、下拉与记忆）
+### Requirement: 排版定位点开关（勾选框与记忆）
 「排版」页签 SHALL 提供「添加定位点」勾选框（默认勾选）与其右侧「样式」下拉（选项「黑三角」/「红点」，默认「黑三角」）；样式下拉在校选框未勾选时与任务运行期间 SHALL 被禁用（不可修改），任务结束后恢复；勾选状态与样式 SHALL 随现有 QSettings 机制记忆（键 `layout/anchors`、`layout/anchor_style`；程序根 `koutu.ini`，不可写时回退 `%APPDATA%\koutu\koutu.ini`）并在重开程序时恢复；勾选与样式的语义 SHALL 与 CLI `--anchors / --no-anchors`、`--anchor-style` 一致。
 
 #### Scenario: 默认勾选
