@@ -70,4 +70,4 @@ def test_cli_layout_anchors_switch(tmp_path):
     )
     assert code2 == 0
     text2 = (tmp_path / "排版日志.txt").read_text(encoding="utf-8-sig")
-    assert "定位点: 已开启（共绘制 1 处：每页 1 处 × 1 页）" in text2  # 小模板无标记也统一绘制
+    assert "定位点: 已开启（样式：黑三角；共绘制 1 处：每页 1 处 × 1 页）" in text2  # 小模板无标记也统一绘制

@@ -65,8 +65,9 @@ def make_cutout_task(src, dst, *, scan_t, feather, margin, log_path) -> Callable
     return task
 
 
-def make_layout_task(demo, src, dst, *, anchors=True, log_path) -> Callable:
+def make_layout_task(demo, src, dst, *, anchors=True, anchor_style=None, log_path) -> Callable:
     """构造排版任务闭包；取消在「单页边界」生效，返回实际生成页数。"""
+    style = anchor_style or layout_core.ANCHOR_STYLE_TRIANGLE
 
     def task(emit, progress, cancel):
         state = {"cancelled": False, "done": 0}
@@ -85,6 +86,7 @@ def make_layout_task(demo, src, dst, *, anchors=True, log_path) -> Callable:
             src,
             dst,
             anchors=anchors,
+            anchor_style=style,
             log_path=log_path,
             emit=emit,
             progress=progress2,

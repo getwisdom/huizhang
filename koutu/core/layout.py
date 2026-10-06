@@ -29,6 +29,7 @@ from functools import cmp_to_key
 
 # —— 槽位识别参数（不可随意改动：与冻结基线对齐） ——
 STEP = 4
+DETECT_FALLBACK_STEP = 2   # 主路径识别不到槽位时的细采样回退步长（空心圆环模板：步长 4 下圆环被打散）
 FG_THRESHOLD = 60
 MIN_REGION_PIXELS = 300
 MERGE_IOU = 0.3
@@ -74,6 +75,13 @@ ANCHOR_HEIGHT = 17.0    # 轴向高
 ANCHOR_HALF_BASE = 12.0 # 底半宽（底宽 24）
 ANCHOR_STROKE = 6.5     # 描边宽（含约 1px 抗锯齿过渡）
 ANCHOR_COLOR = (11, 9, 10)  # 近黑（沿用原设计色）
+# —— 定位点样式（anchor-red-dot：红点几何/颜色按使用者现场模板自带红点实测） ——
+ANCHOR_STYLE_TRIANGLE = "triangle"   # 黑三角（默认）
+ANCHOR_STYLE_DOT = "dot"             # 红点
+ANCHOR_STYLE_NAMES = {ANCHOR_STYLE_TRIANGLE: "黑三角", ANCHOR_STYLE_DOT: "红点"}
+ANCHOR_DOT_DIAMETER = 32.0      # 红点直径（现场模板实测 31~35px，取 32）
+ANCHOR_DOT_GAP = 9.5            # 红点圆心距圆盘外缘（向外为正；实测 +9.6px）
+ANCHOR_DOT_COLOR = (254, 0, 0)  # 纯红（现场模板红点实测色）
 
 
 class LayoutError(Exception):
@@ -110,7 +118,7 @@ class LayoutSummary:
 # 槽位识别
 # ---------------------------------------------------------------------------
 
-def _connected_components(mask: np.ndarray):
+def _connected_components(mask: np.ndarray, step: int = STEP):
     """4 邻域连通域（返回已按 step 放大的包围盒与采样点数，序号即发现顺序）。"""
     from collections import deque
 
@@ -152,7 +160,7 @@ def _connected_components(mask: np.ndarray):
                 label[cy - 1, cx] = idx
                 q.append((cy - 1) * sw + cx)
         comps.append(
-            (x0 * STEP, y0 * STEP, (x1 + 1) * STEP - 1, (y1 + 1) * STEP - 1, cnt)
+            (x0 * step, y0 * step, (x1 + 1) * step - 1, (y1 + 1) * step - 1, cnt)
         )
     return comps
 
@@ -197,16 +205,30 @@ def _fit_circle_cross(rgb: np.ndarray, x0: int, y0: int, x1: int, y1: int):
 
 
 def detect_slots(template_rgb: np.ndarray) -> list[Slot]:
+    """识别圆形槽位（先主路径 STEP=4；识别不到时自动用 DETECT_FALLBACK_STEP 细采样回退）。"""
+    return detect_slots_ex(template_rgb)[0]
+
+
+def detect_slots_ex(template_rgb: np.ndarray) -> tuple[list[Slot], int]:
+    """识别圆形槽位并返回所用采样步长（见「模板槽位识别」规格：仅主路径为空时回退）。"""
+    slots = _detect_slots_step(template_rgb, STEP)
+    if slots:
+        return slots, STEP
+    return _detect_slots_step(template_rgb, DETECT_FALLBACK_STEP), DETECT_FALLBACK_STEP
+
+
+def _detect_slots_step(template_rgb: np.ndarray, step: int) -> list[Slot]:
+    """给定降采样步长的槽位识别（原 detect_slots 函数体，步长参数化）。"""
     dh, dw = template_rgb.shape[0], template_rgb.shape[1]
-    sw, sh = dw // STEP, dh // STEP
-    sample = template_rgb[0 : sh * STEP : STEP, 0 : sw * STEP : STEP, :3].astype(np.int32)
+    sw, sh = dw // step, dh // step
+    sample = template_rgb[0 : sh * step : step, 0 : sw * step : step, :3].astype(np.int32)
     diff = (
         np.abs(sample[..., 0] - 255)
         + np.abs(sample[..., 1] - 255)
         + np.abs(sample[..., 2] - 255)
     )
     mask = diff > FG_THRESHOLD
-    comps = _connected_components(mask)
+    comps = _connected_components(mask, step)
 
     # 合并重叠包围盒（同一圆被切成多块的情况）——与旧实现同式
     merged = []
@@ -551,6 +573,43 @@ def _draw_anchor(canvas: np.ndarray, cx: float, cy: float, r: float) -> None:
     ).astype(np.uint8)
 
 
+def _draw_dot(canvas: np.ndarray, cx: float, cy: float, r: float) -> None:
+    """自绘红点定位点：实心圆，圆心在槽位圆心正上方（距圆盘外缘 ANCHOR_DOT_GAP）。
+
+    几何与颜色按使用者现场模板自带红点实测（见 anchor-red-dot design.md）；
+    以到圆心的距离场做 1px 抗锯齿，仅改 RGB。
+    """
+    dot_x, dot_y = cx, cy - (r + ANCHOR_DOT_GAP)
+    rad = ANCHOR_DOT_DIAMETER / 2.0
+    pad = 2.0
+    x0c = max(0, int(np.floor(dot_x - rad - pad)))
+    y0c = max(0, int(np.floor(dot_y - rad - pad)))
+    x1c = min(canvas.shape[1] - 1, int(np.ceil(dot_x + rad + pad)))
+    y1c = min(canvas.shape[0] - 1, int(np.ceil(dot_y + rad + pad)))
+    if x1c <= x0c or y1c <= y0c:
+        return
+    gx = np.arange(x0c, x1c + 1, dtype=np.float64) + 0.5
+    gy = np.arange(y0c, y1c + 1, dtype=np.float64) + 0.5
+    px, py = np.meshgrid(gx, gy)
+    cover = np.clip(rad + 0.5 - np.hypot(px - dot_x, py - dot_y), 0.0, 1.0)
+    if not (cover > 0).any():
+        return
+    sub = canvas[y0c:y1c + 1, x0c:x1c + 1, :3].astype(np.float64)
+    col = np.asarray(ANCHOR_DOT_COLOR, dtype=np.float64)
+    blended = col[None, None, :] * cover[..., None] + sub * (1.0 - cover[..., None])
+    canvas[y0c:y1c + 1, x0c:x1c + 1, :3] = np.clip(
+        np.floor(blended + 0.5), 0.0, 255.0
+    ).astype(np.uint8)
+
+
+def _draw_marker(canvas: np.ndarray, cx: float, cy: float, r: float, style: str) -> None:
+    """按样式绘制定位点（未知样式回退黑三角）。"""
+    if style == ANCHOR_STYLE_DOT:
+        _draw_dot(canvas, cx, cy, r)
+    else:
+        _draw_anchor(canvas, cx, cy, r)
+
+
 # ---------------------------------------------------------------------------
 # 整批运行
 # ---------------------------------------------------------------------------
@@ -561,6 +620,7 @@ def run_layout_batch(
     out_dir,
     *,
     anchors: bool = True,
+    anchor_style: str = ANCHOR_STYLE_TRIANGLE,
     log_path=None,
     emit=None,
     progress=None,
@@ -589,8 +649,11 @@ def run_layout_batch(
             raise LayoutError(f"找不到模板文件 {demo_path.name}")
         template = imaging.load_rgb(demo_path)
         add(f"模板: {template.shape[1]}x{template.shape[0]}")
-        slots = detect_slots(template)
-        add(f"识别到 {len(slots)} 个槽位")
+        slots, detect_step = detect_slots_ex(template)
+        if detect_step == STEP:
+            add(f"识别到 {len(slots)} 个槽位")
+        else:
+            add(f"识别到 {len(slots)} 个槽位（细采样回退：步长 {detect_step}）")
         if not slots:
             raise LayoutError("模板上没有识别到圆形槽位,请检查 排版demo.png")
         centers = [_measure_slot_center(template, s) for s in slots]
@@ -600,6 +663,7 @@ def run_layout_batch(
             f"圆心修正 ≤{max(math.hypot(c - s.cx, d - s.cy) for (c, d), s in zip(centers, slots)):.1f}px"
         )
         anchor_per_page = len(slots) if anchors else 0
+        style = anchor_style if anchor_style in ANCHOR_STYLE_NAMES else ANCHOR_STYLE_TRIANGLE
 
         infos, skipped = load_base_infos(base_dir)
         add(f"底图数量: {len(infos)}")
@@ -663,7 +727,7 @@ def run_layout_batch(
                 )
             if anchors:
                 for i in range(per_page):
-                    _draw_anchor(canvas, centers[i][0], centers[i][1], radii[i])
+                    _draw_marker(canvas, centers[i][0], centers[i][1], radii[i], style)
                     anchor_drawn += 1
             name = f"第{p + 1}页.png"
             imaging.save_rgba(out_dir / name, canvas)
@@ -673,8 +737,8 @@ def run_layout_batch(
                 progress(p + 1, total_pages)
         if anchors:
             add(
-                f"定位点: 已开启（共绘制 {anchor_drawn} 处："
-                f"每页 {anchor_per_page} 处 × {pages_drawn} 页）"
+                f"定位点: 已开启（样式：{ANCHOR_STYLE_NAMES[style]}；"
+                f"共绘制 {anchor_drawn} 处：每页 {anchor_per_page} 处 × {pages_drawn} 页）"
             )
         else:
             add("定位点: 已关闭")

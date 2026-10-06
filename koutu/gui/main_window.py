@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox, QTabWidget
 
 from .. import paths
 from ..config import open_settings
+from ..core import layout as layout_core
 from .pages import CutoutPage, LayoutPage, WatermarkPage
 from .worker import BatchWorker, make_cutout_task, make_layout_task
 
@@ -88,6 +89,7 @@ class MainWindow(QMainWindow):
             root / paths.DIR_BASE,
             root / paths.DIR_LAYOUT,
             anchors=bool(page.chk_anchors.isChecked()),
+            anchor_style=page.anchor_style(),
             log_path=root / paths.LOG_LAYOUT,
         )
         self._begin(task, page, "排版")
@@ -202,6 +204,9 @@ class MainWindow(QMainWindow):
             )
         except (TypeError, ValueError):
             self.layout_page.chk_anchors.setChecked(True)
+        self.layout_page.set_anchor_style(
+            str(s.value("layout/anchor_style", layout_core.ANCHOR_STYLE_TRIANGLE))
+        )
 
     def save_settings(self) -> None:
         s = self.settings
@@ -210,6 +215,7 @@ class MainWindow(QMainWindow):
         s.setValue("cutout/scan-t", float(self.cutout_page.spin_scan_t.value()))
         s.setValue("cutout/feather", int(self.cutout_page.spin_feather.value()))
         s.setValue("layout/anchors", bool(self.layout_page.chk_anchors.isChecked()))
+        s.setValue("layout/anchor_style", self.layout_page.anchor_style())
         s.sync()
 
     def closeEvent(self, event) -> None:  # noqa: N802（Qt 覆写）

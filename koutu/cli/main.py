@@ -37,6 +37,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=True,
         help="绘制定位点（默认开启；用 --no-anchors 关闭）",
     )
+    p_lay.add_argument(
+        "--anchor-style",
+        choices=(layout_core.ANCHOR_STYLE_TRIANGLE, layout_core.ANCHOR_STYLE_DOT),
+        default=layout_core.ANCHOR_STYLE_TRIANGLE,
+        help="定位点样式：triangle=黑三角（默认）、dot=红点",
+    )
 
     # 入口占位：保留命令名，不执行任何处理（watermark-removal 规格）
     sub.add_parser("watermark", help="去水印（入口占位：功能后续版本提供）")
@@ -71,6 +77,7 @@ def _cmd_layout(args, log_dir=None) -> int:
         src,
         dst,
         anchors=args.anchors,
+        anchor_style=args.anchor_style,
         log_path=log_root / paths.LOG_LAYOUT,
         emit=lambda line: print(line),
     )

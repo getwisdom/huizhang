@@ -49,7 +49,7 @@ def test_anchors_uniform_markers_and_log(tmp_path):
         assert np.array_equal(crops[7], crops[k])
     # 开/关差异仅限标记区域
     assert int(((diff > 0) & ~mask).sum()) == 0
-    assert "定位点: 已开启（共绘制 11 处：每页 11 处 × 1 页）" in text
+    assert "定位点: 已开启（样式：黑三角；共绘制 11 处：每页 11 处 × 1 页）" in text
 
 
 def test_anchors_off_no_marker(tmp_path):
@@ -102,7 +102,7 @@ def test_markers_drawn_on_template_without_mark(tmp_path):
     out_on = tmp_path / "on"
     summary, text = layout.run_layout_batch(demo, base, out_on)
     assert summary.error is None
-    assert "定位点: 已开启（共绘制 1 处：每页 1 处 × 1 页）" in text
+    assert "定位点: 已开启（样式：黑三角；共绘制 1 处：每页 1 处 × 1 页）" in text
     out_off = tmp_path / "off"
     layout.run_layout_batch(demo, base, out_off, anchors=False)
     on = helpers.load_rgba(out_on / "第1页.png")

@@ -11,6 +11,7 @@ from pathlib import Path
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QDoubleSpinBox,
     QFormLayout,
     QHBoxLayout,
@@ -25,6 +26,7 @@ from PyQt6.QtWidgets import (
 )
 
 from .. import paths
+from ..core import layout as layout_core
 
 
 class TaskPage(QWidget):
@@ -128,7 +130,8 @@ class CutoutPage(TaskPage):
 class LayoutPage(TaskPage):
     """排版页签：模板 + 底图 → 已排版（每页张数由模板槽位数决定）。
 
-    参数面：「添加定位点」勾选框（默认勾选；QSettings 记忆；任务运行中禁用）。
+    参数面：「添加定位点」勾选框（默认勾选）与「样式」下拉（黑三角 / 红点，默认黑三角）；
+    两者均由 QSettings 记忆，任务运行中禁用（layout-anchors / anchor-red-dot）。
     """
 
     start_text = "开始排版"
@@ -141,17 +144,39 @@ class LayoutPage(TaskPage):
 
         self.chk_anchors = QCheckBox("添加定位点", self)
         self.chk_anchors.setChecked(True)
+        self.cmb_anchor_style = QComboBox(self)
+        self.cmb_anchor_style.addItem("黑三角", layout_core.ANCHOR_STYLE_TRIANGLE)
+        self.cmb_anchor_style.addItem("红点", layout_core.ANCHOR_STYLE_DOT)
         params = QWidget(self)
         row = QHBoxLayout(params)
         row.setContentsMargins(0, 0, 0, 0)
         row.addWidget(self.chk_anchors)
+        row.addWidget(QLabel("样式：", self))
+        row.addWidget(self.cmb_anchor_style)
         row.addStretch(1)
         self.form.addRow("参数：", params)
+        self._busy = False
+        self.chk_anchors.toggled.connect(self._sync_anchor_style_enabled)
+        self._sync_anchor_style_enabled()
+
+    def anchor_style(self) -> str:
+        """当前定位点样式（送给内核的取值）。"""
+        return str(self.cmb_anchor_style.currentData())
+
+    def set_anchor_style(self, style: str) -> None:
+        """设置样式下拉（未知值回退黑三角）。"""
+        idx = self.cmb_anchor_style.findData(style)
+        self.cmb_anchor_style.setCurrentIndex(idx if idx >= 0 else 0)
+
+    def _sync_anchor_style_enabled(self) -> None:
+        self.cmb_anchor_style.setEnabled(self.chk_anchors.isChecked() and not self._busy)
 
     def set_busy(self, busy: bool, active: bool) -> None:
-        """运行态：定位点勾选框随任务禁用（layout-anchors）。"""
+        """运行态：定位点勾选框与样式下拉随任务禁用（layout-anchors / anchor-red-dot）。"""
         super().set_busy(busy, active)
+        self._busy = busy
         self.chk_anchors.setEnabled(not busy)
+        self._sync_anchor_style_enabled()
 
 
 class WatermarkPage(QWidget):

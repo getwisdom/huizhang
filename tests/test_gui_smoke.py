@@ -87,6 +87,7 @@ def test_layout_end_to_end_offscreen(qapp, monkeypatch, tmp_path, repo_root):
 
     assert not page.btn_start.isEnabled()  # 运行中：禁止再次启动
     assert not page.chk_anchors.isEnabled()  # 运行中：定位点勾选框禁用
+    assert not page.cmb_anchor_style.isEnabled()  # 运行中：样式下拉禁用
 
     assert helpers.pump_until(qapp, lambda: "完成" in page.status.text(), timeout=60.0)
     text = page.log.toPlainText()
@@ -101,8 +102,27 @@ def test_layout_end_to_end_offscreen(qapp, monkeypatch, tmp_path, repo_root):
 def test_layout_anchors_default_and_memory(qapp, monkeypatch, tmp_path):
     win = _mk_window(monkeypatch, tmp_path)
     assert win.layout_page.chk_anchors.isChecked() is True  # 默认勾选
+    assert win.layout_page.anchor_style() == "triangle"  # 默认黑三角
+    assert win.layout_page.cmb_anchor_style.isEnabled()
     win.layout_page.chk_anchors.setChecked(False)
     win.save_settings()
 
     win2 = _mk_window(monkeypatch, tmp_path)
     assert win2.layout_page.chk_anchors.isChecked() is False  # 记忆保持
+
+
+def test_layout_anchor_style_memory_and_gating(qapp, monkeypatch, tmp_path):
+    """样式下拉：默认黑三角、未勾选时禁用、随 QSettings 记忆（anchor-red-dot）。"""
+    win = _mk_window(monkeypatch, tmp_path)
+    page = win.layout_page
+    assert page.anchor_style() == "triangle"
+    page.cmb_anchor_style.setCurrentIndex(1)
+    assert page.anchor_style() == "dot"
+    page.chk_anchors.setChecked(False)
+    assert not page.cmb_anchor_style.isEnabled()  # 不画定位点时样式不可用
+    page.chk_anchors.setChecked(True)
+    assert page.cmb_anchor_style.isEnabled()
+    win.save_settings()
+
+    win2 = _mk_window(monkeypatch, tmp_path)
+    assert win2.layout_page.anchor_style() == "dot"  # 记忆保持
