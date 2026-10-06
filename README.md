@@ -1,65 +1,72 @@
-# koutu · 徽章图片批处理工具集
+# koutu · 徽章图片处理（Python + PyQt6 单程序）
 
-Windows 单机、离线优先的徽章照片批处理工具集：把一批拍摄来的徽章照片，处理成可以直接付印的 A4 排版页。
+Windows 单机、离线优先的徽章照片批处理工具：把一批拍摄来的徽章照片，处理成可以直接付印的 A4 排版页。
 
 ```
 原图\  ──抠图──▶  底图\  ──排版──▶  已排版\第N页.png
 （去水印为入口占位：本版不实现算法，后续版本提供）
 ```
 
-面向的使用者是不写代码的操作人员：把整个目录拷到任意 Windows 电脑，双击 `.exe` 或 `.bat` 就能跑，
-不需要装 Python、PowerShell 模块或任何第三方运行时。
+一个主窗口三个页签（抠图 / 排版 / 去水印占位）+ 一套 CLI 子命令；交付为 PyInstaller 单目录绿色包——
+把交付目录拷到任意 Windows 电脑，双击 `koutu.exe` 就能跑，不需要装 Python 或任何运行时。
 
-## 三段流程
+## 页签（能力）
 
-| 阶段 | 做什么 | 主入口 | 输入 → 输出 |
-| --- | --- | --- | --- |
-| 抠图 | 识别照片中间的圆形徽章，裁成透明背景 PNG | `徽章抠图.exe` / `抠图.bat` | `原图\` → `底图\` |
-| 去水印 | 入口占位——本版不实现算法（后续版本提供） | ——（旧 `去水印.bat` / `去水印AI.bat` 已归档 `legacy\`） | —— |
-| 排版 | 按模板图上自动识别的圆形槽位排成多页 A4 PNG | `排版工具.exe` / `排版.bat` | `底图\` + `排版demo.png` → `已排版\` |
+| 页签 | 做什么 | 输入 → 输出 |
+| --- | --- | --- |
+| 抠图 | 识别照片中间的圆形徽章，裁成透明背景 PNG | `原图\` → `底图\` |
+| 排版 | 按模板图上自动识别的圆形槽位排成多页 A4 PNG | `底图\` + `排版demo.png` → `已排版\` |
+| 去水印 | 入口占位——本版不实现算法（后续版本提供），不执行任何处理 | —— |
 
-去水印：本版不实现算法（入口占位、后续版本提供）；旧路线脚本 `detex.py` / `remove_watermark.py` / `remove_watermark_ai.py`
-已归档 `legacy\`，研究留档见 `docs/水印研究.md`。
-
-## 先编译再运行
-
-本仓库只跟踪源码，不跟踪编译产物。克隆后请先在项目根执行一次：
+## 快速开始
 
 ```powershell
-C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:winexe /optimize+ `
-  /out:徽章抠图.exe /r:System.Windows.Forms.dll /r:System.Drawing.dll 抠图工具.cs
+# 源码运行（开发机，用仓库 .venv 解释器；参数默认值见 CLI --help）
+& D:\workspace\koutu\.venv\Scripts\python.exe -m koutu              # GUI（三页签）
+& D:\workspace\koutu\.venv\Scripts\python.exe -m koutu cutout       # CLI 抠图（原图 → 底图）
+& D:\workspace\koutu\.venv\Scripts\python.exe -m koutu layout       # CLI 排版（底图 → 已排版）
+& D:\workspace\koutu\.venv\Scripts\python.exe -m koutu watermark    # CLI 去水印（占位；退出码 2）
+& D:\workspace\koutu\.venv\Scripts\python.exe -m pytest tests -q    # 测试（挂接 golden）
 
-C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:exe /optimize+ `
-  /out:排版工具.exe /r:System.Drawing.dll 排版工具.cs
+# 打包（生成 dist\koutu\ = koutu.exe + _internal\ + 排版demo.png + 使用说明.txt）
+powershell -ExecutionPolicy Bypass -File packaging\打包.ps1
 ```
 
-不想编译也可以直接用脚本版：`抠图.bat`、`排版.bat` 走的就是 `.ps1` 侧的实现。
+`dist\`、`build\`、`*.exe` 不入库；交付时整目录（exe 与 `_internal\` 一起）拷贝分发。
 
 ## 目录即接口
 
-各阶段用固定的中文目录名交互，这些名字同时是脚本之间的接口和给操作者的文件接口，**不可重命名**：
+自动流程只读写三个环节目录：`原图\` → `底图\` → `已排版\`（缺失时自动创建）。
+全部 13 个历史中文目录名（含 `无水印*`、`doubao`、`原图_去水印` 等）是不可重命名、不可删除的接口；
+本版对 `无水印*` 系目录没有任何自动写入者。完整契约见 `openspec/specs/pipeline-orchestration/spec.md`。
 
-`原图\` · `底图\` · `无水印\` · `无水印_细纹轻\` · `无水印_细纹重\` · `无水印底图\` · `已排版\` · `doubao\`
+## 硬约束（维护者须知）
 
-目录由脚本自动创建，不需要手工建。完整契约见 [`openspec/specs/pipeline-orchestration/spec.md`](openspec/specs/pipeline-orchestration/spec.md)。
+- **单实现 + 金标准回归**：正式实现只有 `koutu/` 一份；行为对照 `golden/`（像素级指标 + 日志统计行，
+  **禁止逐字节 SHA 对照**）；容差唯一来源 `docs/验收清单.md`。
+- **一切以「程序根」为根**：打包版 = `koutu.exe` 所在目录；源码版 = 仓库根；不依赖当前工作目录。
+- **日志是验收证据**：`运行日志.txt`（抠图）/ `排版日志.txt`（排版，含槽位分配表），固定写在程序根。
+- **编码**：`.py / .md / .txt` = UTF-8；`.ps1` = UTF-8 **带 BOM**；界面文案与日志全中文。
+- **Windows-only**；运行期不依赖网络或外部服务。
+
+## 仓库地图
+
+| 位置 | 内容 |
+| --- | --- |
+| `koutu/` | 正式实现（core / cli / gui） |
+| `packaging/` | `koutu.spec` + `打包.ps1` |
+| `tests/` | pytest 回归（挂接 golden） |
+| `golden/` | 旧工具行为的冻结基线（只读；对照命令在 `golden/scripts/`） |
+| `legacy/` | 旧实现归档（只读参考、不参与验收；旧文档在 `legacy/docs/`） |
+| `docs/` | 验收清单、环境验证、各波汇报（`docs/汇报/`） |
+| `openspec/` | 规格驱动产物（proposal / specs / changes） |
+| `dist/`（构建产生，不入库） | 交付包 `dist\koutu\`（整目录分发） |
 
 ## 文档
 
 | 文件 | 内容 |
 | --- | --- |
-| [`PROJECT.md`](PROJECT.md) | 技术栈、目录契约、架构模式、编译命令 |
-| [`使用说明.txt`](使用说明.txt) | 抠图工具的操作步骤 |
-| [`排版工具使用说明.txt`](排版工具使用说明.txt) | 排版工具的操作步骤 |
-| [`总结文档.md`](总结文档.md) | 整体流程与算法说明 |
-| [`AGENTS.md`](AGENTS.md) | 给 AI 协作者的仓库约定与 OpenSpec 工作流 |
-| `openspec/specs/` | 各能力的基线规格（当前已做到的行为） |
-
-## 主要约束
-
-- **仅 Windows**：依赖 .NET Framework 4.x、`System.Drawing`、`System.Windows.Forms`，以及 WinRT OCR。
-- **双实现同步**：抠图算法同时存在于 `抠图工具.cs` 和 `cut_badge.ps1`，排版算法同时存在于 `排版工具.cs` 和 `layout.ps1`，
-  改一侧必须同步另一侧，否则两个入口行为会分叉。
-- **一切以脚本/exe 所在目录为根**：不写死绝对路径，整个目录可搬迁。
-- **保留透明通道**：抠图输出（含羽化带）与排版的 `alpha` 语义不可被破坏；去水印本版不处理像素（后续版本实现时沿用该约束）。
-- **日志是验收证据**：`运行日志.txt` / `排版日志.txt` / `_layout_log.txt` 里的统计行是人工核对正确性的手段。
-- **没有自动化测试和 CI**：改动后需实际运行受影响的脚本，并对照能力规格里的 Scenario 检查日志。
+| [`使用说明.txt`](使用说明.txt) | 操作者文档（随交付包分发）：三页签操作、CLI、日志位置、常见问题 |
+| [`docs/验收清单.md`](docs/验收清单.md) | 验收判据与容差（唯一数值来源） |
+| [`PROJECT.md`](PROJECT.md) | 给维护者的完整项目说明 |
+| [`AGENTS.md`](AGENTS.md) | 仓库约定与 OpenSpec 工作流 |
