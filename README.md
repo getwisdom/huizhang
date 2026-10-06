@@ -15,7 +15,7 @@ Windows 单机、离线优先的徽章照片批处理工具：把一批拍摄来
 | 页签 | 做什么 | 输入 → 输出 |
 | --- | --- | --- |
 | 抠图 | 识别照片中间的圆形徽章，裁成透明背景 PNG | `原图\` → `底图\` |
-| 排版 | 按模板图上自动识别的圆形槽位排成多页 A4 PNG | `底图\` + `排版demo.png` → `已排版\` |
+| 排版 | 按模板图上自动识别的圆形槽位排成多页 A4 PNG（槽位内侧的小三角「定位点」默认开启、可关） | `底图\` + `排版demo.png` → `已排版\` |
 | 去水印 | 入口占位——本版不实现算法（后续版本提供），不执行任何处理 | —— |
 
 ## 快速开始
@@ -24,7 +24,7 @@ Windows 单机、离线优先的徽章照片批处理工具：把一批拍摄来
 # 源码运行（开发机，用仓库 .venv 解释器；参数默认值见 CLI --help）
 & D:\workspace\koutu\.venv\Scripts\python.exe -m koutu              # GUI（三页签）
 & D:\workspace\koutu\.venv\Scripts\python.exe -m koutu cutout       # CLI 抠图（原图 → 底图）
-& D:\workspace\koutu\.venv\Scripts\python.exe -m koutu layout       # CLI 排版（底图 → 已排版）
+& D:\workspace\koutu\.venv\Scripts\python.exe -m koutu layout       # CLI 排版（底图 → 已排版；--no-anchors 关闭定位点）
 & D:\workspace\koutu\.venv\Scripts\python.exe -m koutu watermark    # CLI 去水印（占位；退出码 2）
 & D:\workspace\koutu\.venv\Scripts\python.exe -m pytest tests -q    # 测试（挂接 golden）
 
