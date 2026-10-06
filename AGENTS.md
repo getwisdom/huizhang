@@ -49,7 +49,7 @@
 - **不要改目录契约**：`原图 / 原图_去水印 / doubao / 底图 / 无水印 / 无水印_AI重绘 / 无水印_精修 / 无水印_细纹轻 / 无水印_细纹重 / 无水印底图 / 去水印_预览 / 已排版 / 水印诊断` 这些中文目录名是给操作者的接口，**不可重命名、不可删除**；新程序的自动流程只读写 `原图 → 底图 → 已排版`。
 - **一切以程序根为根**：打包版 = `koutu.exe` 所在目录（`os.path.dirname(os.path.abspath(sys.executable))`）；源码版 = 仓库根。不依赖当前工作目录，不写死绝对路径。
 - **Windows-only**：依赖 Python 3.12 + PyQt6 / numpy / Pillow；交付为 PyInstaller `--onedir --windowed` 单目录绿色包（不装 Python 也能双击跑）。不做跨平台适配。
-- **依赖与构建**：解释器用仓库 `.venv`（`D:\workspace\koutu\.venv\Scripts\python.exe`；裸 `python` 是商店占位符，别用）；依赖精确锁定在 `requirements.txt`；装包用华为云镜像（`-i https://mirrors.huaweicloud.com/repository/pypi/simple`）。
+- **依赖与构建**：解释器用仓库 `.venv`（`D:\workspace\koutu\.venv\Scripts\python.exe`；**项目内不要用裸 `python`**——2026-10-05 起它指向 Python312 基础环境（无项目依赖），只适合跑零散脚本）；依赖精确锁定在 `requirements.txt`；装包用华为云镜像（`-i https://mirrors.huaweicloud.com/repository/pypi/simple`）。
 - **不引入联网服务**：运行期不得依赖网络或外部服务（AI 去水印为非目标）。
 - **文件编码**：`.py / .md / .txt` 一律 UTF-8；`.ps1` 一律 UTF-8 **带 BOM**（PowerShell 5.1 会按 GBK 误读导致语法错）；如保留 `.bat` 用系统 ANSI（GBK）并在开头 `chcp 65001`。
 - **面向操作者一律中文**：界面文案、日志、文档、错误提示都用中文。
