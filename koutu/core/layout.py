@@ -56,6 +56,19 @@ FIT_BAND = 70           # 圆径实测：中心行带（±px）
 FIT_HALF = 470          # 圆径实测：单侧扫描窗口
 FIT_THR = 215           # 圆径实测：内容判据 min(R,G,B) < 该值
 FIT_MAX_DRIFT = 80      # 实测半径与检测半径偏差超此值视为异常 → 回退检测值
+# —— 圆盘圆心实测参数（layout-center；现场实测：检测圆心被图案抬高 0.1~15.9px） ——
+DISC_WHITE = 246        # 圆心实测：白底判据 min(R,G,B) >= 该值视为圆盘外的白底
+DISC_RUN = 3            # 圆心实测：边界判据「连续 N 个非白像素」
+DISC_ANGLES = 720       # 圆心实测：采样角数
+DISC_TRIM = 3.0         # 圆心实测：截尾圆拟合内点容差（px）
+DISC_ROUNDS = 3         # 圆心实测：截尾圆拟合轮数
+DISC_OUT_SPAN = 60      # 圆心实测：外起点 = 检测半径 + 该值
+DISC_IN_SPAN = 170      # 圆心实测：内终点 = 检测半径 - 该值
+DISC_SCAN_MAX = 470.0   # 圆心实测：向外扫描上限（px）
+DISC_SCAN_MIN = 150.0   # 圆心实测：向内扫描下限（px）
+DISC_MAX_SHIFT = 40.0   # 圆心实测：圆心修正上限，超此值回退检测圆心
+DISC_MIN_SHIFT = 1.0    # 圆心实测：修正量小于此值视为亚像素噪声 → 沿用检测圆心（保持既有模板逐像素不变）
+DISC_MIN_RATIO = 0.5    # 圆心实测：拟合半径小于检测半径的该比例视为测错 → 回退（边界点取「首个非白」，比真实外缘小约 0.5px，故不用绝对阈值）
 ANCHOR_EDGE_GAP = 8.5   # 定位点顶端距圆外缘
 ANCHOR_HEIGHT = 17.0    # 轴向高
 ANCHOR_HALF_BASE = 12.0 # 底半宽（底宽 24）
@@ -359,6 +372,7 @@ def _render_slot_patch(
     info: BaseInfo,
     *,
     radius: float | None = None,
+    center: tuple[float, float] | None = None,
     convention: str = COMPOSITE_CONVENTION,
     a: float = COMPOSITE_A,
     premult: bool = COMPOSITE_PREMULT,
@@ -367,11 +381,13 @@ def _render_slot_patch(
     """渲染一个槽位的合成补丁（白底上的最终 RGB），返回 (patch_uint8, (x0, y0))。
 
     radius：绘制目标半径（默认检测半径；layout-fit 传入按模板圆盘实测的重测值）。
+    center：绘制中心（默认检测圆心；layout-center 传入圆盘实测校正后的圆心）。
     补丁原点为页面坐标，可能超出页面边界（由调用方裁剪）。
     """
     r = slot.r if radius is None else radius
-    dest_x = slot.cx - r - 1.0
-    dest_y = slot.cy - r - 1.0
+    cx, cy = (slot.cx, slot.cy) if center is None else center
+    dest_x = cx - r - 1.0
+    dest_y = cy - r - 1.0
     dest_w = 2.0 * r + 2.0
     dest_h = dest_w
     src_x = float(info.min_x - 1)
@@ -442,6 +458,52 @@ def _fit_slot_radius(template_rgb: np.ndarray, slot: Slot) -> float:
     if r_fit < MIN_SLOT_RADIUS or abs(r_fit - slot.r) > FIT_MAX_DRIFT:
         return slot.r
     return r_fit
+
+
+def _measure_slot_center(template_rgb: np.ndarray, slot: Slot) -> tuple[float, float]:
+    """实测圆盘圆心（修正图案干扰造成的检测圆心偏移）；失败时回退检测圆心。
+
+    圆盘之外是白底：自圆盘外向内取「首个连续 DISC_RUN 个非白像素」作边界点，
+    以边界点质心为初值做截尾圆拟合（Kasa）。阈值与回退规则见本变更 design.md：
+    修正量 < DISC_MIN_SHIFT（亚像素噪声）、拟合半径不足检测半径的 DISC_MIN_RATIO、或修正量越界（> DISC_MAX_SHIFT）时沿用检测圆心。
+    """
+    h, w = template_rgb.shape[0], template_rgb.shape[1]
+    r_far = int(min(slot.r + DISC_OUT_SPAN, DISC_SCAN_MAX))
+    r_near = int(max(slot.r - DISC_IN_SPAN, DISC_SCAN_MIN))
+    if r_far <= r_near:
+        return slot.cx, slot.cy
+    ang = np.arange(DISC_ANGLES) * (2.0 * math.pi / DISC_ANGLES)
+    cos_a, sin_a = np.cos(ang), np.sin(ang)
+    rs = np.arange(r_far, r_near - 1, -1, dtype=np.float64)
+    xs = np.clip(np.rint(slot.cx + np.outer(rs, cos_a)).astype(np.int64), 0, w - 1)
+    ys = np.clip(np.rint(slot.cy + np.outer(rs, sin_a)).astype(np.int64), 0, h - 1)
+    nonwhite = template_rgb[ys, xs, :3].min(axis=2) < DISC_WHITE
+    runs = np.lib.stride_tricks.sliding_window_view(nonwhite, DISC_RUN, axis=0).all(axis=-1)
+    found = runs.any(axis=0)
+    if int(found.sum()) < DISC_ANGLES // 4:
+        return slot.cx, slot.cy
+    idx = runs.argmax(axis=0)[found]
+    px = slot.cx + rs[idx] * cos_a[found]
+    py = slot.cy + rs[idx] * sin_a[found]
+    cx = float(px.mean())
+    cy = float(py.mean())
+    r_fit = float(np.median(np.hypot(px - cx, py - cy)))
+    for _ in range(DISC_ROUNDS):
+        keep = np.abs(np.hypot(px - cx, py - cy) - r_fit) < DISC_TRIM
+        if int(keep.sum()) < 12:
+            break
+        kx, ky = px[keep], py[keep]
+        mat = np.vstack([kx, ky, np.ones_like(kx)]).T
+        sol, *_ = np.linalg.lstsq(mat, kx * kx + ky * ky, rcond=None)
+        cx, cy = sol[0] / 2.0, sol[1] / 2.0
+        r_fit = math.sqrt(max(sol[2] + cx * cx + cy * cy, 0.0))
+    if r_fit < slot.r * DISC_MIN_RATIO or abs(r_fit - slot.r) > FIT_MAX_DRIFT:
+        return slot.cx, slot.cy
+    if math.hypot(cx - slot.cx, cy - slot.cy) > DISC_MAX_SHIFT:
+        return slot.cx, slot.cy
+    if math.hypot(cx - slot.cx, cy - slot.cy) < DISC_MIN_SHIFT:
+        return slot.cx, slot.cy
+    return float(cx), float(cy)
 
 
 def _draw_anchor(canvas: np.ndarray, cx: float, cy: float, r: float) -> None:
@@ -531,7 +593,12 @@ def run_layout_batch(
         add(f"识别到 {len(slots)} 个槽位")
         if not slots:
             raise LayoutError("模板上没有识别到圆形槽位,请检查 排版demo.png")
+        centers = [_measure_slot_center(template, s) for s in slots]
         radii = [_fit_slot_radius(template, s) for s in slots]
+        add(
+            f"圆盘实测: {len(slots)} 个槽位 圆径 {min(radii):.1f}~{max(radii):.1f} "
+            f"圆心修正 ≤{max(math.hypot(c - s.cx, d - s.cy) for (c, d), s in zip(centers, slots)):.1f}px"
+        )
         anchor_per_page = len(slots) if anchors else 0
 
         infos, skipped = load_base_infos(base_dir)
@@ -571,7 +638,9 @@ def run_layout_batch(
                     break
                 info = infos[idx]
                 slot = slots[i]
-                patch, alpha, (px0, py0) = _render_slot_patch(slot, info, radius=radii[i])
+                patch, alpha, (px0, py0) = _render_slot_patch(
+                    slot, info, radius=radii[i], center=centers[i]
+                )
                 ph, pw = patch.shape[0], patch.shape[1]
                 cx0 = max(0, px0)
                 cy0 = max(0, py0)
@@ -589,11 +658,12 @@ def run_layout_batch(
                     ).astype(np.uint8)
                 add(
                     f"  p{p + 1} slot#{i + 1:>2} "
-                    f"({math.floor(slot.cx + 0.5)},{math.floor(slot.cy + 0.5)}) <- {info.name}"
+                    f"({math.floor(centers[i][0] + 0.5)},{math.floor(centers[i][1] + 0.5)})"
+                    f" <- {info.name}"
                 )
             if anchors:
                 for i in range(per_page):
-                    _draw_anchor(canvas, slots[i].cx, slots[i].cy, radii[i])
+                    _draw_anchor(canvas, centers[i][0], centers[i][1], radii[i])
                     anchor_drawn += 1
             name = f"第{p + 1}页.png"
             imaging.save_rgba(out_dir / name, canvas)
