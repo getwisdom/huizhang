@@ -1,6 +1,6 @@
-"""CLI：cutout（抠图）/ layout（排版）。
+"""CLI：cutout（抠图）/ layout（排版）/ watermark（入口占位）。
 
-退出码：全部成功 0 / 有文件失败 1 / 未捕获异常 2。
+退出码：全部成功 0 / 有文件失败 1 / 未捕获异常 2（watermark 占位固定为 2）。
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from ..core import layout as layout_core
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="koutu", description="徽章图片处理（抠图 / 排版）"
+        prog="koutu", description="徽章图片处理（抠图 / 排版；去水印为入口占位）"
     )
     parser.add_argument("--version", action="version", version=f"koutu {__version__}")
     sub = parser.add_subparsers(dest="command", metavar="<命令>")
@@ -31,6 +31,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_lay.add_argument("--demo", default=paths.DEMO_NAME, help="模板文件（默认 排版demo.png）")
     p_lay.add_argument("--src", default=paths.DIR_BASE, help="输入目录（默认 底图）")
     p_lay.add_argument("--dst", default=paths.DIR_LAYOUT, help="输出目录（默认 已排版）")
+
+    # 入口占位：保留命令名，不执行任何处理（watermark-removal 规格）
+    sub.add_parser("watermark", help="去水印（入口占位：功能后续版本提供）")
     return parser
 
 
@@ -72,6 +75,10 @@ def main(argv=None, log_dir=None) -> int:
     args = parser.parse_args(argv)
     if args.command is None:
         parser.print_help()
+        return 2
+    if args.command == "watermark":
+        # 入口占位：只输出中文说明，不读写任何目录、不执行任何处理
+        print("去水印功能后续版本提供（本版仅保留入口占位，不执行任何处理）。")
         return 2
     try:
         if args.command == "cutout":

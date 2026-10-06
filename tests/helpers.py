@@ -85,3 +85,15 @@ def make_badge_image(directory, name="badge.png", size=800, cx=400, cy=400, r=20
     p.parent.mkdir(parents=True, exist_ok=True)
     Image.fromarray(img, "RGBA").save(str(p), "PNG")
     return p
+
+
+def pump_until(qapp, cond, timeout=30.0):
+    """在 offscreen 测试里驱动事件循环，直到条件满足或超时；返回最终条件值。"""
+    import time
+
+    deadline = time.time() + timeout
+    while not cond() and time.time() < deadline:
+        qapp.processEvents()
+        time.sleep(0.005)
+    qapp.processEvents()
+    return cond()

@@ -1,10 +1,14 @@
 """pytest 共享夹具（重写项目验收装置骨架）。
 
 说明：本骨架只提供最基础能力；完整验收流程见 docs/验收清单.md。
+GUI 冒烟一律用 offscreen 平台（需在导入 PyQt6 之前设置）。
 """
+import os
 from pathlib import Path
 
 import pytest
+
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 COPY_ROOT = Path(r"D:\workspace\_koutu_golden")
@@ -28,3 +32,14 @@ def copy_root() -> Path:
     if not COPY_ROOT.exists():
         pytest.skip("仓库外副本 D:\\workspace\\_koutu_golden 不存在，跳过副本相关用例")
     return COPY_ROOT
+
+
+@pytest.fixture(scope="session")
+def qapp():
+    """会话级 QApplication（offscreen 平台）。"""
+    from PyQt6.QtWidgets import QApplication
+
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication([])
+    return app
