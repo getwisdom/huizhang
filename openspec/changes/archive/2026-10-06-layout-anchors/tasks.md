@@ -33,7 +33,7 @@
 
 ## 6. 回归、打包与归档
 
-- [ ] 6.1 全量回归：`pytest tests -q`（当前 50 passed, 1 skipped——跳过项为 cutout golden「源图缺失」，系会话前外部数据替换所致、基线同况）、`openspec validate --strict --all`、阶段 0.1 / 0.2、阶段 2 复跑（关闭 = 基线一致、开启 = 新判据）；数字留档 `docs\汇报\15-排版定位点.md`
-- [ ] 6.2 打包更新：`packaging\打包.ps1` 重建 `dist\koutu\`（含 使用说明.txt + 排版demo.png）；中文 + 空格路径冒烟（GUI 三页签 / 退出、CLI 开 / 关各一页、退出码 0/1/2 契约）；数字留档
+- [x] 6.1 全量回归：`pytest tests -q` **50 passed, 1 skipped**（跳过项为 cutout golden「源图缺失」，系会话前外部数据替换所致、基线同况）；`openspec validate --strict --all` **9/9 全绿**；阶段 0.2 **差异 0**；阶段 0.1 **差异 26**（全部为会话前外部替换：`原图`7 张、`底图`7 换 12——非本变更写入，证据见 `docs\汇报\15-排版定位点.md` ⑤）；阶段 2 复跑：关闭 = `1141（0.0131%）`、开启 = `9497（0.1092%）`、窗口 == 模板 11/11、开关差异 8360 全在窗口内
+- [x] 6.2 打包更新：`packaging\打包.ps1` 重建 `dist\koutu\`（**退出码 0、可重复执行**；200 文件 / 138.6 MB；同级含 使用说明.txt + 排版demo.png）；中文 + 空格路径冒烟——GUI「koutu · 徽章处理工具」**279 ms** / 关闭退出码 0；CLI 开 / 关各 1 页退出码 0；`watermark`=2、缺模板=1；产物数字与源码版一致（8360 全在窗口内；关闭 vs 基线 1141 / 0.0131%；窗口 11/11）
 - [ ] 6.3 `openspec archive layout-anchors` 归档（合并 3 份 delta）并复验 `openspec validate --strict --all`
 - [ ] 6.4 `docs\汇报\15-排版定位点.md`（六节）与提交（仅本变更明确写入的路径）
