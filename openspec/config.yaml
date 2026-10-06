@@ -5,8 +5,8 @@ context: |
   这是一个纯 Windows 的单机徽章图片处理工具（koutu），面向不写代码的操作人员：
   把徽章照片处理成可付印的排版页——抠图（原图 → 底图）→ 排版（底图 + 排版demo.png → 已排版）；去水印本版为入口占位（不实现算法，算法后续版本提供）。
 
-  自 2026-10-06 起正在按提案 python-pyqt-rewrite 完全重写：单程序、两功能页签 + 去水印占位页签（PyQt6）
-  + CLI 子命令（cutout / layout / watermark 占位），交付 PyInstaller 单目录绿色包；
+  2026-10-06 已完成 python-pyqt-rewrite 重写并按该日归档（openspec/changes/archive/2026-10-06-python-pyqt-rewrite/）：
+  单程序、两功能页签 + 去水印占位页签（PyQt6）+ CLI 子命令（cutout / layout / watermark 占位），交付 PyInstaller 单目录绿色包；
   旧实现（C# / PowerShell / 旧 Python）已整体归档 legacy/（只读参考、不参与验收）。
 
   所有 OpenSpec 产物（proposal / specs / design / tasks）与代码注释、界面文案一律用中文书写。

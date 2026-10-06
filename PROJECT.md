@@ -10,9 +10,9 @@
 2. **去水印**（入口占位）— 本版不实现去水印算法；程序保留「去水印」页签与 `watermark` 子命令占位（提示「后续版本提供」），算法留待后续版本；
 3. **排版** — 按模板图上自动识别出的圆形槽位，排成多页 A4 尺寸 PNG。
 
-**当前状态（2026-10-06 起）**：仓库正在按 OpenSpec 提案 `python-pyqt-rewrite` 完全重写为
-**Python + PyQt6 单程序**（一个主窗口三个页签：抠图 / 排版 / 去水印占位 + CLI 子命令），交付 PyInstaller 单目录绿色包。
-实施进度见 `openspec/changes/python-pyqt-rewrite/tasks.md`；旧实现已整体归档 `legacy/`（只读参考、不参与验收）。
+**当前状态（2026-10-06）**：重写已完成并按 OpenSpec 流程归档——`python-pyqt-rewrite` 交付 **Python + PyQt6 单程序**
+（一个主窗口三个页签：抠图 / 排版 / 去水印占位 + CLI 子命令）、PyInstaller 单目录绿色包。
+实施记录与任务见 `openspec/changes/archive/2026-10-06-python-pyqt-rewrite/tasks.md`；旧实现已整体归档 `legacy/`（只读参考、不参与验收）。
 行为对照的基线是 `golden/` 冻结物，对照命令与容差见 `docs/验收清单.md`。
 
 面对的使用者是不写代码的操作人员：把整个目录拷到任意 Windows 电脑，双击 `koutu.exe` 就能跑，
@@ -41,8 +41,7 @@
 - `底图\` 之后的去水印本版为入口占位（不实现算法；算法后续版本提供）
 - 输入 `底图\` + `排版demo.png` / 输出 `已排版\`（排版）
 
-全部 13 个保留目录名与完整契约见 `openspec/specs/pipeline-orchestration/spec.md`（归档后版本）与
-本变更 delta；`doubao`、`无水印底图`、`无水印_精修`、`无水印_AI重绘`、`去水印_预览`、`水印诊断`、
+全部 13 个保留目录名与完整契约见 `openspec/specs/pipeline-orchestration/spec.md`；`doubao`、`无水印底图`、`无水印_精修`、`无水印_AI重绘`、`去水印_预览`、`水印诊断`、
 `原图_去水印` 为保留名（人工/历史用途，不参与自动流程）。
 
 ### 程序根定位（可整目录搬迁）
@@ -76,7 +75,7 @@
 
 ### 输出覆盖同名文件
 
-各阶段输出同名 `.png` 并直接覆盖，不做备份、不加时间戳。`已排版\` 例外：每次运行先清空旧 PNG。
+各阶段输出同名 `.png` 并直接覆盖，不做备份、不加时间戳。**仅默认 `已排版\`** 每次运行先清空旧 PNG（安全规则）；操作者自定义的输出目录不会被自动清理——只写不删、同名覆盖，日志提示计数（判据见 `docs\验收清单.md` 阶段 5）。
 
 ## Architecture Patterns
 
@@ -116,7 +115,7 @@
 - **输出尺寸与模板一致**：排版页必须等于模板尺寸（2480×3508，白底）。
 - **透明通道必须保留**：抠图输出（含羽化带）的 alpha 语义不可被后续环节破坏。
 - **无联网依赖**：运行期不依赖任何网络服务。
-- **不使用破坏性快捷键操作**：处理是批量覆盖写的，运行前应确认输出目录内容可弃。
+- **批量覆盖写入**：处理按同名覆盖写；仅默认 `已排版\` 会先清空旧 `*.png`，自定义输出目录只写不删（运行前确认默认目录内容可弃即可）。
 
 ## External Dependencies
 
@@ -130,7 +129,7 @@
 ## 构建 / 运行命令
 
 ```powershell
-# 源码运行（开发；koutu/ 包在 W1–W5 波次落地，以下为既定目标形态）
+# 源码运行（开发；用仓库 .venv 解释器）
 & D:\workspace\koutu\.venv\Scripts\python.exe -m koutu              # GUI（三页签）
 & D:\workspace\koutu\.venv\Scripts\python.exe -m koutu cutout       # CLI 抠图（批处理）
 & D:\workspace\koutu\.venv\Scripts\python.exe -m pytest tests -q    # 测试（挂 golden）
@@ -143,4 +142,4 @@
 #   legacy\抠图.bat / legacy\排版.bat 等仍可手动运行，但产物对照一律以 golden\ 为准
 ```
 
-> 设计依据：`openspec/changes/python-pyqt-rewrite/design.md`（D1 分层 / D7 打包）；环境实测数据：`docs/环境验证.md` §5–6。
+> 设计依据（已归档）：`openspec/changes/archive/2026-10-06-python-pyqt-rewrite/design.md`（D1 分层 / D7 打包）；环境实测数据：`docs/环境验证.md` §5–6。
