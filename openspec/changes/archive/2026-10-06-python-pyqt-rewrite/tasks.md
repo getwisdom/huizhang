@@ -64,7 +64,7 @@
 
 ## 6. 评审与归档（W6）
 
-- [ ] 6.1 全量回归：阶段 0.1 / 0.2（更新后命令）、阶段 1 / 2 / 4 复跑、`pytest tests -q` 全绿；验证：全部通过并记录实测数字
-- [ ] 6.2 `openspec archive python-pyqt-rewrite` 归档本变更（合并 7 份 delta）；验证：退出码 0，`openspec validate --strict --all` 全绿
-- [ ] 6.3 归档后文字清理：修订 5 份主规格的 Purpose / 工具表等非需求文字为单程序世界；验证：`openspec show` 通读无旧工具（exe/bat/csc）残留
+- [x] 6.1 全量回归：阶段 0.1 / 0.2（更新后命令）、阶段 1 / 2 / 4 复跑、`pytest tests -q` 全绿；验证：全部通过并记录实测数字 —— 0.1/0.2 差异数 0/0；源码复跑 cutout 7/7、layout 1 页（像素对照：底图零差异、整页 0.0132%）；打包版复跑（验收 C）窗口 265 ms、退出码 0/0/2；pytest 45 passed
+- [x] 6.2 `openspec archive python-pyqt-rewrite` 归档本变更（合并 7 份 delta）；验证：退出码 0，`openspec validate --strict --all` 全绿 —— 归档为 `openspec/changes/archive/2026-10-06-python-pyqt-rewrite/`；7 份规格更新/新增（badge-cutout 8 条 / badge-layout 6 条 / desktop-gui 5 条新增 / diagnostics 3 条 / packaging-toolchain 7 条新增 / pipeline-orchestration 4 条 / watermark-removal 3 条）；validate 7/7 全绿（退出码 0）
+- [x] 6.3 归档后文字清理：修订 5 份主规格的 Purpose / 工具表等非需求文字为单程序世界；验证：`openspec show` 通读无旧工具（exe/bat/csc）残留 —— 5 份主规格 Purpose/工具表已重写（含 watermark 三条路线表 → 入口占位、pipeline 阶段表 → 三页签载体）；残留扫描无旧工具（仅需求内保留对 `legacy/` 的历史归档说明）
 - [ ] 6.4 最终汇报与红线复核：`docs/汇报/` 汇总（含各步提交哈希）、数据目录零改动、git 历史未改写、工作树干净；验证：留档复核命令输出
