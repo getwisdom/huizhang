@@ -71,7 +71,7 @@
 - **PowerShell 5.1 编码三连坑**：含中文的 `.ps1` 必须存成 UTF-8 **带 BOM**（否则按 GBK 误读、语法报错）；`Get-Content` 读 UTF-8 文本要加 `-Encoding UTF8`；用工具（编辑器/AI）写出的文件默认无 BOM，写 `.ps1` 后要过一遍补 BOM 命令（见 `docs/环境验证.md` §7）。
 - **OpenSpec CLI 默认收集匿名使用统计**；关闭方式：`openspec config set telemetry.enabled false`。
 - **`PROJECT.md` 放在项目根，不在 `openspec/`**：OpenSpec 1.x 不再把 `openspec/project.md` 当作项目上下文（改由 `openspec/config.yaml` 的 `context` 承载），留在 `openspec/` 里会被 `init` 反复提示清理。文档本身对人有用，所以搬到了项目根；项目约定变更时两份都要改。
-- **git**：新开的终端可直接用 `git`；旧会话（环境变量未刷新）用全路径 `C:\Program Files\Git\cmd\git.exe`。提交信息用中文；提交前先 `git status` 确认没有把数据目录 / `.venv` / 运行日志带进来。
+- **git**：新开的终端可直接用 `git`；旧会话（环境变量未刷新）用全路径 `C:\Program Files\Git\cmd\git.exe`。**远端**：`origin` → `https://github.com/getwisdom/huizhang.git`（同步：`git push origin main`；GitHub 线路时通时断，连不上时看 `docs/环境验证.md` 的 hosts 备注）。提交信息用中文；提交前先 `git status` 确认没有把数据目录 / `.venv` / 运行日志带进来。
 - **工作流技能装在 `.agents/skills/`**（`--tools agents`，厂商中立）。重装/更新用：`openspec init --tools agents --no-animation`——实测不会覆盖 `openspec/config.yaml`，可以放心重跑。技能集合跟随全局 profile：改完 profile 后必须再跑一次 init，`.agents/skills/` 才会刷新。
 
 ## 工作流集合
